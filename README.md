@@ -33,11 +33,12 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Risk manager** — five independent limits: max SOL per trade, daily loss limit, max trades/day, max open positions, stop-loss — pure arithmetic, no model involved, and the last gate before a (simulated) trade
 - **Reputation book** — creators are blocked after their tracked launches rug, forgotten after a configurable number of days
 - **Dry-run executor** — simulates entry/exit at real observed prices, feeding the reputation book and daily counters exactly like a live executor would
+- **Backtest report** — replays recorded signals and closed dry-run positions to show funnel counts, win rate, PnL distribution, and stop-loss frequency
 - **Button-only Telegram frontend**: RU/EN language picker, stats, open positions, optional mandatory-subscription gate, button-driven admin panel — no slash commands beyond `/start`
 
 ## Roadmap
 
-Not built yet, tracked as follow-up work: a backtest engine over the logged `signals` history, multi-chain support (Base via Clanker, Robinhood Chain via hood.fun, alongside Solana/pump.fun), and a read-only web dashboard showing the screening funnel.
+Not built yet, tracked as follow-up work: multi-chain support (Base via Clanker, Robinhood Chain via hood.fun, alongside Solana/pump.fun), and a read-only web dashboard showing the screening funnel.
 
 ## Stack
 
@@ -93,6 +94,7 @@ docker compose up -d --build
 Any user ID in `ADMIN_IDS` sees a "🛠 Admin panel" button on the main menu:
 
 - **📊 Stats** — users, tokens screened, dry-run buys, today's simulated P&L, open positions, blocked creators
+- **📈 Backtest** — all-time funnel, win rate, average/median PnL, best/worst trade, and stop-loss hit rate
 - **📣 Broadcast** — send a message to every known user
 - **📢 Channels** — set or unset the mandatory-subscription channel per interface language
 

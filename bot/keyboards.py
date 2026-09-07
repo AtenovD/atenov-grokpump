@@ -36,6 +36,7 @@ def admin_root_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📊 Stats", callback_data="admin:stats")],
+            [InlineKeyboardButton(text="📈 Backtest", callback_data="admin:backtest")],
             [InlineKeyboardButton(text="📣 Broadcast", callback_data="admin:broadcast")],
             [InlineKeyboardButton(text="📢 Channels", callback_data="admin:channels")],
             [InlineKeyboardButton(text="⬅ Back", callback_data="menu:root")],

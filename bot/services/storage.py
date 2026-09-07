@@ -47,7 +47,10 @@ CREATE TABLE IF NOT EXISTS positions (
     score REAL NOT NULL,
     creator TEXT,
     opened_at INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'open'
+    status TEXT NOT NULL DEFAULT 'open',
+    exit_price REAL,
+    closed_at INTEGER,
+    close_reason TEXT
 );
 
 CREATE TABLE IF NOT EXISTS signals (
@@ -80,6 +83,9 @@ class Position:
     creator: str | None
     opened_at: int
     status: str
+    exit_price: float | None = None
+    closed_at: int | None = None
+    close_reason: str | None = None
 
 
 class Storage:
@@ -90,7 +96,21 @@ class Storage:
     async def connect(self) -> None:
         self._db = await aiosqlite.connect(self._db_path)
         await self._db.executescript(SCHEMA)
+        await self._migrate()
         await self._db.commit()
+
+    async def _migrate(self) -> None:
+        """Apply additive migrations needed by databases created by older releases."""
+        cursor = await self.db.execute("PRAGMA table_info(positions)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        additions = {
+            "exit_price": "REAL",
+            "closed_at": "INTEGER",
+            "close_reason": "TEXT",
+        }
+        for name, sql_type in additions.items():
+            if name not in columns:
+                await self.db.execute(f"ALTER TABLE positions ADD COLUMN {name} {sql_type}")
 
     async def close(self) -> None:
         if self._db is not None:
@@ -260,15 +280,40 @@ class Storage:
         )
         await self.db.commit()
 
-    async def close_position(self, mint: str) -> None:
-        await self.db.execute("UPDATE positions SET status = 'closed' WHERE mint = ?", (mint,))
+    async def close_position(
+        self,
+        mint: str,
+        exit_price: float | None = None,
+        close_reason: str | None = None,
+        closed_at: int | None = None,
+    ) -> None:
+        await self.db.execute(
+            "UPDATE positions SET status = 'closed', exit_price = ?, closed_at = ?, close_reason = ? "
+            "WHERE mint = ?",
+            (exit_price, int(time.time()) if closed_at is None else closed_at, close_reason, mint),
+        )
         await self.db.commit()
 
     async def open_positions(self) -> list[Position]:
         cursor = await self.db.execute(
-            "SELECT mint, symbol, entry_price, sol_spent, score, creator, opened_at, status "
+            "SELECT mint, symbol, entry_price, sol_spent, score, creator, opened_at, status, "
+            "exit_price, closed_at, close_reason "
             "FROM positions WHERE status = 'open' ORDER BY opened_at DESC"
         )
+        return [Position(*row) for row in await cursor.fetchall()]
+
+    async def closed_positions_since(self, timestamp: int | None = None) -> list[Position]:
+        sql = (
+            "SELECT mint, symbol, entry_price, sol_spent, score, creator, opened_at, status, "
+            "exit_price, closed_at, close_reason FROM positions p WHERE status = 'closed' "
+            "AND EXISTS (SELECT 1 FROM signals s WHERE s.mint = p.mint AND s.outcome = 'bought')"
+        )
+        params: tuple[int, ...] = ()
+        if timestamp is not None:
+            sql += " AND COALESCE(closed_at, opened_at) >= ?"
+            params = (timestamp,)
+        sql += " ORDER BY COALESCE(closed_at, opened_at)"
+        cursor = await self.db.execute(sql, params)
         return [Position(*row) for row in await cursor.fetchall()]
 
     async def open_position_count(self) -> int:
@@ -284,6 +329,27 @@ class Storage:
             (mint, symbol, score, stage, outcome, detail, int(time.time())),
         )
         await self.db.commit()
+
+    async def signals_since(self, timestamp: int | None = None) -> list[dict[str, object]]:
+        sql = "SELECT mint, symbol, score, stage, outcome, detail, created_at FROM signals"
+        params: tuple[int, ...] = ()
+        if timestamp is not None:
+            sql += " WHERE created_at >= ?"
+            params = (timestamp,)
+        sql += " ORDER BY created_at"
+        cursor = await self.db.execute(sql, params)
+        return [
+            {
+                "mint": row[0],
+                "symbol": row[1],
+                "score": row[2],
+                "stage": row[3],
+                "outcome": row[4],
+                "detail": row[5],
+                "created_at": row[6],
+            }
+            for row in await cursor.fetchall()
+        ]
 
     async def stats(self) -> dict[str, int | float]:
         day_ago = int(time.time()) - 86400

@@ -110,7 +110,7 @@ async def run_position_watcher(
             pnl_sol = (result.price - position.entry_price) / position.entry_price * position.sol_spent
             pnl_pct = (result.price - position.entry_price) / position.entry_price * 100
 
-            await storage.close_position(position.mint)
+            await storage.close_position(position.mint, price, "stop_loss")
             await storage.record_pnl_only(pnl_sol)
             await reputation.record_outcome(position.creator, pnl_pct)
             price_feed.unwatch(position.mint)

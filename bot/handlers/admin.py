@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
@@ -16,6 +17,7 @@ from bot.keyboards import (
     cancel_keyboard,
 )
 from bot.locales.texts import t
+from bot.services.backtest import run_backtest
 from bot.services.storage import Storage
 from bot.states import AdminStates
 
@@ -53,6 +55,48 @@ async def cb_admin_stats(callback: CallbackQuery, storage: Storage) -> None:
     lang = await _user_lang(storage, callback.from_user.id)
     stats = await storage.stats()
     await callback.message.edit_text(t(lang, "stats", **stats), reply_markup=back_keyboard("admin:open"))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin:backtest")
+async def cb_admin_backtest(callback: CallbackQuery, storage: Storage) -> None:
+    if not _is_admin(callback.from_user.id):
+        await callback.answer()
+        return
+    lang = await _user_lang(storage, callback.from_user.id)
+    report = await run_backtest(storage)
+    stages = ", ".join(
+        t(lang, "backtest_stage_item", stage=stage, count=count)
+        for stage, count in sorted(report.skip_by_stage.items())
+    ) or t(lang, "backtest_none")
+
+    def position_text(position: dict | None) -> str:
+        if position is None:
+            return t(lang, "backtest_none")
+        return t(
+            lang,
+            "backtest_position",
+            symbol=position.get("symbol") or str(position["mint"])[:8],
+            pnl=float(position["pnl_pct"]),
+        )
+
+    text = t(
+        lang,
+        "backtest_report",
+        period_start=datetime.fromtimestamp(report.period_start, timezone.utc).strftime("%Y-%m-%d"),
+        period_end=datetime.fromtimestamp(report.period_end, timezone.utc).strftime("%Y-%m-%d"),
+        total_signals=report.total_signals,
+        total_bought=report.total_bought,
+        total_skipped=report.total_skipped,
+        skip_by_stage=stages,
+        win_rate=report.win_rate * 100,
+        avg_pnl=report.avg_pnl_pct,
+        median_pnl=report.median_pnl_pct,
+        best=position_text(report.best_position),
+        worst=position_text(report.worst_position),
+        stop_loss_rate=report.stop_loss_hit_rate * 100,
+    )
+    await callback.message.edit_text(text, reply_markup=back_keyboard("admin:open"))
     await callback.answer()
 
 
