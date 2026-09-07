@@ -10,8 +10,10 @@ class Token:
     name: str | None
     creator: str | None
     sol_in_curve: float
-    unique_buyers: int
+    unique_buyers: int | None
     created_at: float
+    chain: str = "solana"
+    reference_price: float | None = None
 
 
 @dataclass

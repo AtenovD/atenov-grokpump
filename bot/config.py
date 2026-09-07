@@ -12,6 +12,11 @@ def _parse_ids(raw: str) -> set[int]:
     return {int(x) for x in raw.split(",") if x.strip().isdigit()}
 
 
+def _parse_chains(raw: str) -> tuple[str, ...]:
+    chains = tuple(dict.fromkeys(part.strip().lower() for part in raw.split(",") if part.strip()))
+    return chains or ("solana",)
+
+
 @dataclass(frozen=True)
 class Config:
     bot_token: str = field(default_factory=lambda: os.environ["BOT_TOKEN"])
@@ -36,6 +41,19 @@ class Config:
 
     # New-launch data feed (PumpPortal's public pump.fun WebSocket feed).
     data_ws_url: str = field(default_factory=lambda: os.getenv("DATA_WS_URL", "wss://pumpportal.fun/api/data"))
+    enabled_chains: tuple[str, ...] = field(
+        default_factory=lambda: _parse_chains(os.getenv("ENABLED_CHAINS", "solana"))
+    )
+    base_data_url: str = field(
+        default_factory=lambda: os.getenv("BASE_DATA_URL", "https://www.clanker.world/api/tokens")
+    )
+    base_rpc_url: str = field(default_factory=lambda: os.getenv("BASE_RPC_URL", "https://mainnet.base.org"))
+    robinhood_data_url: str = field(
+        default_factory=lambda: os.getenv("ROBINHOOD_DATA_URL", "https://hood.fun")
+    )
+    robinhood_rpc_url: str = field(
+        default_factory=lambda: os.getenv("ROBINHOOD_RPC_URL", "https://rpc.mainnet.chain.robinhood.com")
+    )
     min_launch_age_seconds: int = field(default_factory=lambda: int(os.getenv("MIN_LAUNCH_AGE_SECONDS", "60")))
     min_unique_buyers: int = field(default_factory=lambda: int(os.getenv("MIN_UNIQUE_BUYERS", "5")))
 

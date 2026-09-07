@@ -11,7 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from bot.config import config
 from bot.handlers import admin, start
 from bot.middlewares.subscription import SubscriptionMiddleware
-from bot.services.price_feed import PriceFeed
+from bot.services.chains import build_adapters
 from bot.services.reputation import ReputationBook
 from bot.services.scheduler import run_monitor_loop, run_position_watcher
 from bot.services.storage import Storage
@@ -35,15 +35,17 @@ async def main() -> None:
     dp.include_router(start.router)
 
     reputation = ReputationBook(storage)
-    price_feed = PriceFeed()
-    price_feed_task = asyncio.create_task(price_feed.run())
-    monitor_task = asyncio.create_task(run_monitor_loop(bot, storage, price_feed))
-    watcher_task = asyncio.create_task(run_position_watcher(storage, reputation, price_feed))
+    adapters = build_adapters()
+    adapter_map = {adapter.chain_id: adapter for adapter in adapters}
+    price_feed_tasks = [asyncio.create_task(adapter.run()) for adapter in adapters]
+    monitor_task = asyncio.create_task(run_monitor_loop(bot, storage, adapters))
+    watcher_task = asyncio.create_task(run_position_watcher(storage, reputation, adapter_map))
 
     try:
         await dp.start_polling(bot)
     finally:
-        price_feed_task.cancel()
+        for task in price_feed_tasks:
+            task.cancel()
         monitor_task.cancel()
         watcher_task.cancel()
         await storage.close()
