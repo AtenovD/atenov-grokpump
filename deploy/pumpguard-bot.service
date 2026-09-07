@@ -1,0 +1,15 @@
+[Unit]
+Description=PumpGuard Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=pumpguard
+WorkingDirectory=/opt/pumpguard-bot
+EnvironmentFile=/opt/pumpguard-bot/.env
+ExecStart=/opt/pumpguard-bot/venv/bin/python -m bot.main
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

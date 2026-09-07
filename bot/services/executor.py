@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+import random
+import time
+from dataclasses import dataclass
+
+from bot.services.models import Token
+
+
+@dataclass
+class TradeResult:
+    ok: bool
+    price: float = 0.0
+    tx_hash: str = ""
+    error: str = ""
+
+
+class DryRunExecutor:
+    """Simulates a buy/sell — no wallet, no signing, no network call to any chain.
+
+    This is intentionally the only executor in this project. A live executor
+    that signs and broadcasts real Solana transactions is a materially
+    different, much higher-stakes piece of software and is out of scope here
+    on purpose — this bot is a research/screening tool, not a trading bot.
+    """
+
+    async def buy(self, token: Token, size_sol: float) -> TradeResult:
+        price = max(token.sol_in_curve, 0.0001) / max(token.unique_buyers, 1)
+        return TradeResult(ok=True, price=price, tx_hash=f"dryrun-buy-{token.mint[:8]}-{int(time.time())}")
+
+    async def sell(self, mint: str, entry_price: float) -> TradeResult:
+        # Simulated outcome for paper-trading purposes only.
+        drift_pct = random.uniform(-80, 150)
+        exit_price = entry_price * (1 + drift_pct / 100)
+        return TradeResult(ok=True, price=exit_price, tx_hash=f"dryrun-sell-{mint[:8]}-{int(time.time())}")

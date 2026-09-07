@@ -1,0 +1,108 @@
+<svg viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel-bg: #eff6ff;
+      --header-bg: #1e3a8a;
+      --header-text: #eff6ff;
+      --bubble-bg: #ffffff;
+      --bubble-border: #bfdbfe;
+      --meta: #2563eb;
+      --text: #0c1a3d;
+      --text-muted: #1d4ed8;
+      --btn-bg: #ffffff;
+      --btn-border: #93c5fd;
+      --btn-text: #1d4ed8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #050b1a;
+        --panel-bg: #0b1730;
+        --header-bg: #1e3a8a;
+        --header-text: #dbeafe;
+        --bubble-bg: #101e40;
+        --bubble-border: #1e3a8a;
+        --meta: #60a5fa;
+        --text: #dbeafe;
+        --text-muted: #60a5fa;
+        --btn-bg: #101e40;
+        --btn-border: #3b82f6;
+        --btn-text: #93c5fd;
+      }
+    }
+    text { fill: var(--text); }
+    .muted { fill: var(--text-muted); }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; }
+    .bubble-text { font-size: 12px; }
+    .bubble-strong { font-size: 13px; font-weight: 700; }
+    .btn-text { font-size: 12px; font-weight: 700; fill: var(--btn-text); }
+    .caption { font-size: 13px; font-weight: 600; }
+  </style>
+
+  <rect x="0" y="0" width="1200" height="560" fill="var(--bg)"/>
+  <text x="40" y="42" class="title">PumpGuard Bot — a signal, end to end</text>
+  <text x="40" y="64" class="subtitle muted">What the alert channel and the main menu look like</text>
+
+  <!-- phone 1: alert -->
+  <g transform="translate(60, 96)">
+    <rect x="0" y="0" width="330" height="420" rx="28" fill="var(--panel-bg)" stroke="var(--bubble-border)" stroke-width="1.5"/>
+    <rect x="0" y="0" width="330" height="56" rx="28" fill="var(--header-bg)"/>
+    <rect x="0" y="28" width="330" height="28" fill="var(--header-bg)"/>
+    <circle cx="34" cy="28" r="16" fill="#ffffff" opacity="0.25"/>
+    <text x="60" y="24" fill="var(--header-text)" font-size="14" font-weight="700">Signal Channel</text>
+    <text x="60" y="40" fill="var(--header-text)" font-size="11" opacity="0.85">PumpGuard Bot</text>
+
+    <rect x="16" y="76" width="298" height="300" rx="12" fill="var(--bubble-bg)" stroke="var(--bubble-border)"/>
+    <text x="30" y="100" class="bubble-strong">🟢 $GAMBLE — score 0.82</text>
+    <text x="30" y="126" class="bubble-text">🔎 Auditor: clean holder spread,</text>
+    <text x="30" y="142" class="bubble-text">no wash trading detected</text>
+    <text x="30" y="164" class="bubble-text">📢 Narrative: strong meme, catchy</text>
+    <text x="30" y="180" class="bubble-text">ticker, high share potential</text>
+    <text x="30" y="202" class="bubble-text">⏱ Timing: launch rate normal,</text>
+    <text x="30" y="218" class="bubble-text">recent win rate favorable</text>
+    <text x="30" y="240" class="bubble-text">✅ Checker: no red flags found</text>
+    <text x="30" y="270" class="bubble-strong">Position size: 0.18 SOL (dry-run)</text>
+    <text x="30" y="292" class="bubble-text" opacity="0.7">pump.fun/xgCvLM...AfKMJ</text>
+    <text x="290" y="360" class="caption muted" text-anchor="end">10:02</text>
+  </g>
+
+  <!-- phone 2: main menu / stats -->
+  <g transform="translate(430, 96)">
+    <rect x="0" y="0" width="330" height="420" rx="28" fill="var(--panel-bg)" stroke="var(--bubble-border)" stroke-width="1.5"/>
+    <rect x="0" y="0" width="330" height="56" rx="28" fill="var(--header-bg)"/>
+    <rect x="0" y="28" width="330" height="28" fill="var(--header-bg)"/>
+    <circle cx="34" cy="28" r="16" fill="#ffffff" opacity="0.25"/>
+    <text x="60" y="24" fill="var(--header-text)" font-size="14" font-weight="700">PumpGuard Bot</text>
+    <text x="60" y="40" fill="var(--header-text)" font-size="11" opacity="0.85">stats</text>
+
+    <rect x="16" y="76" width="298" height="46" rx="11" fill="var(--btn-bg)" stroke="var(--btn-border)"/>
+    <text x="165" y="104" text-anchor="middle" class="btn-text">📊 Stats</text>
+    <rect x="16" y="130" width="298" height="46" rx="11" fill="var(--btn-bg)" stroke="var(--btn-border)"/>
+    <text x="165" y="158" text-anchor="middle" class="btn-text">📂 Open positions</text>
+
+    <rect x="16" y="192" width="298" height="184" rx="12" fill="var(--bubble-bg)" stroke="var(--bubble-border)"/>
+    <text x="30" y="216" class="bubble-strong">📊 Stats</text>
+    <text x="30" y="240" class="bubble-text">Tokens screened (24h): 214</text>
+    <text x="30" y="258" class="bubble-text">Bought, dry-run (24h): 3</text>
+    <text x="30" y="276" class="bubble-text">Trades today: 3</text>
+    <text x="30" y="294" class="bubble-text">PnL today: +0.0410 SOL</text>
+    <text x="30" y="312" class="bubble-text">Open positions: 2</text>
+    <text x="30" y="330" class="bubble-text">Blocked creators: 7</text>
+    <text x="30" y="356" class="bubble-text" opacity="0.7">All figures are dry-run simulation.</text>
+  </g>
+
+  <!-- summary card -->
+  <rect x="800" y="96" width="360" height="420" rx="18" fill="var(--panel-bg)" stroke="var(--bubble-border)" stroke-width="1.5"/>
+  <text x="820" y="130" class="bubble-strong" font-size="15">Why this pairs Grok with plain code</text>
+  <text x="820" y="164" class="bubble-text">Grok agents judge things that need</text>
+  <text x="820" y="182" class="bubble-text">judgment — is this narrative catchy,</text>
+  <text x="820" y="200" class="bubble-text">does this pattern look manipulated.</text>
+  <text x="820" y="232" class="bubble-text">Everything with a hard number —</text>
+  <text x="820" y="250" class="bubble-text">position sizing, daily loss limits,</text>
+  <text x="820" y="268" class="bubble-text">rug counts — is plain arithmetic,</text>
+  <text x="820" y="286" class="bubble-text">no model call, no ambiguity.</text>
+  <text x="820" y="318" class="bubble-text">The risk manager can't be talked</text>
+  <text x="820" y="336" class="bubble-text">out of its limits by a good story —</text>
+  <text x="820" y="354" class="bubble-text">it runs after the agents, not before.</text>
+</svg>
