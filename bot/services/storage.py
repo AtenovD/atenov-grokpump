@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS required_channels (
 
 CREATE TABLE IF NOT EXISTS seen_tokens (
     mint TEXT PRIMARY KEY,
+    symbol TEXT,
+    name TEXT,
     first_seen_at INTEGER NOT NULL
 );
 
@@ -151,12 +153,36 @@ class Storage:
         cursor = await self.db.execute("SELECT 1 FROM seen_tokens WHERE mint = ?", (mint,))
         return await cursor.fetchone() is not None
 
-    async def mark_seen(self, mint: str) -> None:
+    async def mark_seen(self, mint: str, symbol: str | None = None, name: str | None = None) -> None:
         await self.db.execute(
-            "INSERT OR IGNORE INTO seen_tokens (mint, first_seen_at) VALUES (?, ?)",
-            (mint, int(time.time())),
+            "INSERT OR IGNORE INTO seen_tokens (mint, symbol, name, first_seen_at) VALUES (?, ?, ?, ?)",
+            (mint, symbol, name, int(time.time())),
         )
         await self.db.commit()
+
+    async def find_similar_recent(self, symbol: str | None, name: str | None, since_seconds: int, exclude_mint: str) -> list[str]:
+        """Normalized exact-match lookup for a copycat launch reusing a recent name/symbol.
+
+        Deliberately simple (case/punctuation-insensitive exact match, not fuzzy) — cheap,
+        no external dependency, and copycat scams overwhelmingly reuse the name verbatim.
+        """
+        def norm(s: str | None) -> str:
+            return "".join(ch for ch in (s or "").lower() if ch.isalnum())
+
+        target_symbol, target_name = norm(symbol), norm(name)
+        if not target_symbol and not target_name:
+            return []
+
+        cutoff = int(time.time()) - since_seconds
+        cursor = await self.db.execute(
+            "SELECT mint, symbol, name FROM seen_tokens WHERE first_seen_at >= ? AND mint != ?",
+            (cutoff, exclude_mint),
+        )
+        matches = []
+        for mint, sym, nm in await cursor.fetchall():
+            if (target_symbol and norm(sym) == target_symbol) or (target_name and norm(nm) == target_name):
+                matches.append(mint)
+        return matches
 
     # --- reputation book ---------------------------------------------------
 
@@ -164,6 +190,12 @@ class Storage:
         cursor = await self.db.execute("SELECT rugs FROM creators WHERE creator = ?", (creator,))
         row = await cursor.fetchone()
         return row[0] if row else 0
+
+    async def creator_stats(self, creator: str) -> tuple[int, int]:
+        """Returns (rugs, wins) for a creator, (0, 0) if never seen before."""
+        cursor = await self.db.execute("SELECT rugs, wins FROM creators WHERE creator = ?", (creator,))
+        row = await cursor.fetchone()
+        return (row[0], row[1]) if row else (0, 0)
 
     async def record_creator_outcome(self, creator: str, is_rug: bool) -> None:
         now = int(time.time())

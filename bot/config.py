@@ -27,6 +27,12 @@ class Config:
     grok_checker_model: str = field(default_factory=lambda: os.getenv("GROK_CHECKER_MODEL", "grok-4"))
     grok_timeout_seconds: float = field(default_factory=lambda: float(os.getenv("GROK_TIMEOUT_SECONDS", "20")))
     grok_max_retries: int = field(default_factory=lambda: int(os.getenv("GROK_MAX_RETRIES", "3")))
+    grok_breaker_failure_threshold: int = field(
+        default_factory=lambda: int(os.getenv("GROK_BREAKER_FAILURE_THRESHOLD", "5"))
+    )
+    grok_breaker_cooldown_seconds: float = field(
+        default_factory=lambda: float(os.getenv("GROK_BREAKER_COOLDOWN_SECONDS", "60"))
+    )
 
     # New-launch data feed (PumpPortal's public pump.fun WebSocket feed).
     data_ws_url: str = field(default_factory=lambda: os.getenv("DATA_WS_URL", "wss://pumpportal.fun/api/data"))

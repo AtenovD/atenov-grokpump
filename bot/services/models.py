@@ -34,6 +34,7 @@ class RiskDecision:
 @dataclass
 class TokenAnalysis:
     token: Token
+    researcher: AgentVerdict | None = None
     auditor: AgentVerdict | None = None
     narrative: AgentVerdict | None = None
     timing: AgentVerdict | None = None

@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import random
 import time
 from collections import deque
 
 import aiohttp
 from aiogram import Bot
 
+from bot.config import config
 from bot.services import pipeline
 from bot.services.executor import DryRunExecutor
 from bot.services.monitor import stream_new_tokens
+from bot.services.price_feed import PriceFeed
 from bot.services.reputation import ReputationBook
 from bot.services.risk import RiskManager
 from bot.services.storage import Storage
@@ -54,7 +55,7 @@ class MarketPulse:
         return data
 
 
-async def run_monitor_loop(bot: Bot, storage: Storage) -> None:
+async def run_monitor_loop(bot: Bot, storage: Storage, price_feed: PriceFeed) -> None:
     """Consumes the launch feed, screens each token, opens dry-run positions."""
     pulse = MarketPulse()
     risk = RiskManager(storage)
@@ -66,7 +67,7 @@ async def run_monitor_loop(bot: Bot, storage: Storage) -> None:
             pulse.record_launch()
             if await storage.is_seen(token.mint):
                 continue
-            await storage.mark_seen(token.mint)
+            await storage.mark_seen(token.mint, token.symbol, token.name)
 
             try:
                 analysis = await pipeline.screen_token(
@@ -77,21 +78,43 @@ async def run_monitor_loop(bot: Bot, storage: Storage) -> None:
                 continue
 
             if analysis is not None:
-                await pipeline.broadcast_signal(bot, analysis)
+                price_feed.watch(token.mint)
+                await pipeline.broadcast_signal(bot, session, analysis)
 
 
-async def run_position_watcher(storage: Storage, reputation: ReputationBook, check_interval_sec: int = 60) -> None:
-    """Periodically 'closes' dry-run positions with a simulated outcome, feeding the
-    reputation book and daily PnL — since there's no live price feed to watch."""
+async def run_position_watcher(
+    storage: Storage, reputation: ReputationBook, price_feed: PriceFeed, check_interval_sec: int = 15
+) -> None:
+    """Watches real bonding-curve prices for open positions and force-closes any
+    position whose drawdown from entry hits STOP_LOSS_PCT — exactly the exit rule
+    a live executor would need, run here against a real (but unexecuted) price."""
     executor = DryRunExecutor()
+
+    # Positions may already be open from a previous run (state persists in sqlite) —
+    # make sure the price feed is watching all of them, not just newly opened ones.
+    for position in await storage.open_positions():
+        price_feed.watch(position.mint)
+
     while True:
         await asyncio.sleep(check_interval_sec)
         for position in await storage.open_positions():
-            if time.time() - position.opened_at < 300:
-                continue  # give a position at least 5 minutes before simulating an exit
-            result = await executor.sell(position.mint, position.entry_price)
+            price = price_feed.get_price(position.mint)
+            if price is None:
+                continue  # no trade observed yet for this mint — nothing to act on
+
+            drawdown_pct = (position.entry_price - price) / position.entry_price * 100
+            if drawdown_pct < config.stop_loss_pct:
+                continue  # still within tolerance, keep watching
+
+            result = await executor.sell(position.mint, price)
             pnl_sol = (result.price - position.entry_price) / position.entry_price * position.sol_spent
             pnl_pct = (result.price - position.entry_price) / position.entry_price * 100
+
             await storage.close_position(position.mint)
             await storage.record_pnl_only(pnl_sol)
             await reputation.record_outcome(position.creator, pnl_pct)
+            price_feed.unwatch(position.mint)
+            logger.info(
+                "stop-loss closed %s: entry=%.10f exit=%.10f pnl=%.4f SOL (%.1f%%)",
+                position.mint[:8], position.entry_price, price, pnl_sol, pnl_pct,
+            )

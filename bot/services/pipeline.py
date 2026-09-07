@@ -8,6 +8,7 @@ from aiogram import Bot
 
 from bot.config import config
 from bot.services import agents
+from bot.services.digest import synthesize_digest
 from bot.services.executor import DryRunExecutor
 from bot.services.models import Token, TokenAnalysis
 from bot.services.reputation import ReputationBook
@@ -51,6 +52,10 @@ async def screen_token(
         await storage.log_signal(token.mint, token.symbol, None, "reputation", "skip", blocked)
         return None
 
+    # Researcher is a free, instant DB lookup (creator history, copycat-name detection) —
+    # it runs before any paid Grok call and its findings are handed to the checker later.
+    analysis.researcher = await agents.run_researcher(storage, token)
+
     # Auditor and narrative can run independently; timing needs the shared snapshot.
     analysis.auditor = await agents.run_auditor(session, token, holders={}, trades={})
     analysis.narrative = await agents.run_narrative(session, token)
@@ -68,7 +73,9 @@ async def screen_token(
         await storage.log_signal(token.mint, token.symbol, total, "scoring", "skip", "below_threshold")
         return None
 
-    analysis.checker = await agents.run_checker(session, token, [analysis.auditor, analysis.narrative, analysis.timing])
+    analysis.checker = await agents.run_checker(
+        session, token, [analysis.researcher, analysis.auditor, analysis.narrative, analysis.timing]
+    )
     if not analysis.checker.approve:
         await storage.log_signal(
             token.mint, token.symbol, total, "checker", "skip", analysis.checker.summary
@@ -102,16 +109,14 @@ async def screen_token(
     return analysis
 
 
-async def broadcast_signal(bot: Bot, analysis: TokenAnalysis) -> None:
+async def broadcast_signal(bot: Bot, session: aiohttp.ClientSession, analysis: TokenAnalysis) -> None:
     if not config.alert_chat_id:
         return
     token = analysis.token
+    digest = await synthesize_digest(session, analysis)
     text = (
-        f"🟢 <b>{token.symbol or token.mint[:8]}</b> — score {analysis.total_score:.2f}\n"
-        f"🔎 Auditor: {analysis.auditor.summary}\n"
-        f"📢 Narrative: {analysis.narrative.summary}\n"
-        f"⏱ Timing: {analysis.timing.summary}\n"
-        f"✅ Checker: {analysis.checker.summary}\n\n"
+        f"🟢 <b>{token.symbol or token.mint[:8]}</b> — score {analysis.total_score:.2f}\n\n"
+        f"{digest}\n\n"
         f"Position size: {analysis.risk.size_sol:.4f} SOL (dry-run)\n"
         f"https://pump.fun/{token.mint}"
     )

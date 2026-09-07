@@ -19,15 +19,25 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 ## Features
 
 - **New-launch monitor** — subscribes to [PumpPortal](https://pumpportal.fun)'s public pump.fun WebSocket feed, filters by age and buyer count before spending a single Grok call
-- **Four Grok agents**, run in sequence, cheapest first:
-  - **Auditor** — looks for wash trading / bundled buys in the trade and holder data
-  - **Narrative** — scores the meme's attention potential from its name/symbol
-  - **Timing** — judges the current window using only this bot's own observed launch/outcome rate (no external price feeds)
-  - **Checker** — an adversarial final pass on a stronger model, given the other three verdicts, explicitly looking for a reason to reject
+- **Five agents**, cheapest first:
+  - **Researcher** — free, instant DB lookups before any Grok call: has this creator rugged before, does this name/symbol copy a token launched in the last few hours (copycat-of-a-trending-coin detection)
+  - **Auditor** (Grok) — looks for wash trading / bundled buys in the trade and holder data
+  - **Narrative** (Grok) — scores the meme's attention potential from its name/symbol
+  - **Timing** (Grok) — judges the current window using only this bot's own observed launch/outcome rate (no external price feeds)
+  - **Checker** (Grok, stronger model) — an adversarial final pass given all four prior verdicts, explicitly looking for a reason to reject
+- **Real price tracking** — open dry-run positions are watched against the actual bonding-curve price (via PumpPortal's per-token trade stream), not a random number
+- **Real stop-loss** — a position is force-closed the moment its real observed drawdown from entry crosses `STOP_LOSS_PCT`
+- **Circuit breaker on Grok** — after several consecutive failures, the pipeline stops calling Grok for a cooldown window instead of hammering a struggling API on every new launch
+- **Explainability digest** — the four agent verdicts are synthesized by Grok into one short, readable paragraph for the alert, instead of four raw JSON summaries
+- **Prompt-injection resistant** — token symbol/name/description are attacker-controlled; they're sanitized and every agent prompt explicitly frames them as data, not instructions, before anything reaches Grok
 - **Risk manager** — five independent limits: max SOL per trade, daily loss limit, max trades/day, max open positions, stop-loss — pure arithmetic, no model involved, and the last gate before a (simulated) trade
 - **Reputation book** — creators are blocked after their tracked launches rug, forgotten after a configurable number of days
-- **Dry-run executor** — simulates entry/exit prices and P&L, feeding the reputation book and daily counters exactly like a live executor would
+- **Dry-run executor** — simulates entry/exit at real observed prices, feeding the reputation book and daily counters exactly like a live executor would
 - **Button-only Telegram frontend**: RU/EN language picker, stats, open positions, optional mandatory-subscription gate, button-driven admin panel — no slash commands beyond `/start`
+
+## Roadmap
+
+Not built yet, tracked as follow-up work: a backtest engine over the logged `signals` history, multi-chain support (Base via Clanker, Robinhood Chain via hood.fun, alongside Solana/pump.fun), and a read-only web dashboard showing the screening funnel.
 
 ## Stack
 
@@ -74,6 +84,8 @@ docker compose up -d --build
 | `MIN_LAUNCH_AGE_SECONDS` / `MIN_UNIQUE_BUYERS` | pre-filter before any Grok call is made |
 | `MAX_SOL_PER_TRADE` / `DAILY_LOSS_LIMIT_SOL` / `MAX_TRADES_PER_DAY` / `MAX_OPEN_POSITIONS` | risk manager limits |
 | `RUG_LOSS_PCT` / `BLOCK_CREATOR_AFTER_RUGS` / `FORGET_CREATORS_AFTER_DAYS` | reputation book tuning |
+| `STOP_LOSS_PCT` | real drawdown from entry that force-closes a dry-run position |
+| `GROK_BREAKER_FAILURE_THRESHOLD` / `GROK_BREAKER_COOLDOWN_SECONDS` | circuit breaker tuning for Grok outages |
 | `ALERT_CHAT_ID` | optional channel/group every passing signal is also posted to |
 
 ## Admin panel

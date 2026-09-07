@@ -9,8 +9,11 @@ from typing import Any
 import aiohttp
 
 from bot.config import config
+from bot.services.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger(__name__)
+
+breaker = CircuitBreaker(config.grok_breaker_failure_threshold, config.grok_breaker_cooldown_seconds)
 
 
 class GrokError(RuntimeError):
@@ -46,6 +49,10 @@ async def ask_grok(
         logger.warning("GROK_API_KEY not set, skipping Grok call")
         return None
 
+    if not breaker.allow():
+        logger.warning("Grok circuit breaker is open — skipping call, assuming the worst")
+        return None
+
     payload = {
         "model": model or config.grok_fast_model,
         "temperature": 0,
@@ -70,9 +77,12 @@ async def ask_grok(
                 resp.raise_for_status()
                 body = await resp.json()
                 content = body["choices"][0]["message"]["content"]
-                return _extract_json(content)
+                result = _extract_json(content)
+                breaker.record_success()
+                return result
         except (aiohttp.ClientError, asyncio.TimeoutError, KeyError, IndexError, json.JSONDecodeError, GrokError) as exc:
             logger.warning("Grok call failed (attempt %d/%d): %s", attempt + 1, config.grok_max_retries, exc)
             await asyncio.sleep(0.5 * (attempt + 1))
 
+    breaker.record_failure()
     return None
