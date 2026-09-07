@@ -122,6 +122,7 @@ async def run_position_watcher(
             price = adapter.get_price(position.mint)
             if price is None:
                 continue  # no trade observed yet for this mint — nothing to act on
+            await storage.record_price_snapshot(position.mint, price, position.chain)
 
             drawdown_pct = (position.entry_price - price) / position.entry_price * 100
             if drawdown_pct < config.stop_loss_pct:

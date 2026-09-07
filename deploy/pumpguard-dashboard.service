@@ -1,0 +1,15 @@
+[Unit]
+Description=PumpGuard Read-only Dashboard
+After=network.target pumpguard-bot.service
+
+[Service]
+Type=simple
+User=pumpguard
+WorkingDirectory=/opt/pumpguard-bot
+EnvironmentFile=/opt/pumpguard-bot/.env
+ExecStart=/opt/pumpguard-bot/venv/bin/python -m dashboard.main
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

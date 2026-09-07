@@ -35,14 +35,11 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Dry-run executor** — simulates entry/exit at real observed prices, feeding the reputation book and daily counters exactly like a live executor would
 - **Backtest report** — replays recorded signals and closed dry-run positions to show funnel counts, win rate, PnL distribution, and stop-loss frequency
 - **Button-only Telegram frontend**: RU/EN language picker, stats, open positions, optional mandatory-subscription gate, button-driven admin panel — no slash commands beyond `/start`
-
-## Roadmap
-
-Not built yet, tracked as follow-up work: a read-only web dashboard showing the screening funnel.
+- **Read-only web dashboard** — responsive funnel, recorded-performance summary, open positions, and a polling JSON stats endpoint without a second market-data connection
 
 ## Stack
 
-Python 3.12, [aiogram 3](https://docs.aiogram.dev/), aiohttp, `websockets`, aiosqlite. Grok API (xAI) for the four agents.
+Python 3.12, [aiogram 3](https://docs.aiogram.dev/), aiohttp, `websockets`, aiosqlite. Optional FastAPI/Jinja dashboard. Grok API (xAI) for the four agents.
 
 ## Quick start
 
@@ -65,6 +62,15 @@ cp .env.example .env  # fill in
 sudo cp deploy/pumpguard-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now pumpguard-bot
+```
+
+Install the optional dashboard dependencies and service when the web view is needed:
+
+```bash
+venv/bin/pip install -r requirements-dashboard.txt
+sudo cp deploy/pumpguard-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pumpguard-dashboard
 ```
 
 ## Deploy with Docker
@@ -91,6 +97,19 @@ docker compose up -d --build
 | `STOP_LOSS_PCT` | real drawdown from entry that force-closes a dry-run position |
 | `GROK_BREAKER_FAILURE_THRESHOLD` / `GROK_BREAKER_COOLDOWN_SECONDS` | circuit breaker tuning for Grok outages |
 | `ALERT_CHAT_ID` | optional channel/group every passing signal is also posted to |
+| `DASHBOARD_PORT` | read-only dashboard listen port (defaults to `8000`) |
+
+## Read-only dashboard
+
+Run `python -m dashboard.main` or `uvicorn dashboard.main:app`. The dashboard opens the bot's SQLite file with SQLite `mode=ro`; it issues only `SELECT`/`PRAGMA` queries. The bot periodically stores the latest observed price for each open position so `/positions` can display it without starting another PumpPortal connection.
+
+Routes:
+
+- `/` — 1h/24h/7d screening funnel plus recorded backtest metrics
+- `/positions` — open dry-run positions and the latest bot-written price snapshot
+- `/api/stats` — JSON equivalent of the Telegram statistics view, polled by the dashboard
+
+**Do not expose the dashboard port publicly without authentication in front of it.** Put it behind your own VPN or an authenticated nginx/Caddy reverse proxy; authentication is deliberately outside the FastAPI app.
 
 ## Chain data sources and pricing
 

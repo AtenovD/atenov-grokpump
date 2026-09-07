@@ -22,6 +22,7 @@ class Config:
     bot_token: str = field(default_factory=lambda: os.environ["BOT_TOKEN"])
     admin_ids: set[int] = field(default_factory=lambda: _parse_ids(os.getenv("ADMIN_IDS", "")))
     db_path: str = field(default_factory=lambda: os.getenv("DB_PATH", "pumpguard.db"))
+    dashboard_port: int = field(default_factory=lambda: int(os.getenv("DASHBOARD_PORT", "8000")))
 
     # Grok (xAI) — used for the 4 screening agents. Never used to place trades.
     grok_api_key: str = field(default_factory=lambda: os.getenv("GROK_API_KEY", ""))

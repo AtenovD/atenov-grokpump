@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from bot.services.storage import Storage
+from dashboard.queries import read_backtest, read_funnel, read_open_positions, read_stats
+
+WINDOWS = {"1h": 3600, "24h": 86400, "7d": 7 * 86400}
+TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+
+def create_app(db_path: str | None = None) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        storage = Storage(db_path or os.getenv("DB_PATH", "pumpguard.db"))
+        await storage.connect_readonly()
+        app.state.storage = storage
+        try:
+            yield
+        finally:
+            await storage.close()
+
+    app = FastAPI(title="PumpGuard Dashboard", lifespan=lifespan)
+
+    @app.get("/", response_class=HTMLResponse)
+    async def funnel_page(request: Request, window: str = "24h"):
+        if window not in WINDOWS:
+            raise HTTPException(status_code=400, detail="window must be 1h, 24h, or 7d")
+        storage = request.app.state.storage
+        return TEMPLATES.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={
+                "page": "funnel", "window": window, "windows": WINDOWS,
+                "stats": await read_stats(storage),
+                "funnel": await read_funnel(storage, WINDOWS[window]),
+                "backtest": await read_backtest(storage, WINDOWS[window]),
+            },
+        )
+
+    @app.get("/positions", response_class=HTMLResponse)
+    async def positions_page(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={
+                "page": "positions",
+                "positions": await read_open_positions(request.app.state.storage),
+            },
+        )
+
+    @app.get("/api/stats")
+    async def api_stats(request: Request):
+        return await read_stats(request.app.state.storage)
+
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "dashboard.main:app", host="0.0.0.0",
+        port=int(os.getenv("DASHBOARD_PORT", "8000")),
+    )
