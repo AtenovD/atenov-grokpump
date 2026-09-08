@@ -79,6 +79,9 @@ class Config:
 
     alert_chat_id: str | None = field(default_factory=lambda: os.getenv("ALERT_CHAT_ID") or None)
     webhook_urls: tuple[str, ...] = field(default_factory=lambda: _parse_urls(os.getenv("WEBHOOK_URLS", "")))
+    public_digest_chat_id: str | None = field(
+        default_factory=lambda: os.getenv("PUBLIC_DIGEST_CHAT_ID") or None
+    )
 
     # Optional per-user Grok OAuth. This is separate from the screening API key.
     xai_oauth_client_id: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_ID", ""))

@@ -41,6 +41,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Reputation book** — creators are blocked after their tracked launches rug, forgotten after a configurable number of days
 - **Dry-run executor** — simulates entry/exit at real observed prices, feeding the reputation book and daily counters exactly like a live executor would
 - **Backtest report** — replays recorded signals and closed dry-run positions to show funnel counts, win rate, PnL distribution, and stop-loss frequency
+- **Weekly public digest** — optionally publishes the previous seven days of recorded backtest performance to a separate public channel
 - **Button-only Telegram frontend**: RU/EN language picker, stats, open positions, optional mandatory-subscription gate, button-driven admin panel — no slash commands beyond `/start`
 - **Read-only web dashboard** — responsive funnel, recorded-performance summary, open positions, and a polling JSON stats endpoint without a second market-data connection
 - **Versioned signal webhooks** — optionally POST every passing `TokenAnalysis` to multiple integrations with one retry and a stable v1 JSON envelope
@@ -115,6 +116,7 @@ Railway's current project-level Infrastructure as Code definition is `.railway/r
 | `GROK_BREAKER_FAILURE_THRESHOLD` / `GROK_BREAKER_COOLDOWN_SECONDS` | circuit breaker tuning for Grok outages |
 | `ALERT_CHAT_ID` | optional channel/group every passing signal is also posted to |
 | `WEBHOOK_URLS` | optional comma-separated webhook endpoints for passing signals; see `docs/webhook-schema.md` |
+| `PUBLIC_DIGEST_CHAT_ID` | optional, separate channel for the weekly seven-day performance digest |
 | `DASHBOARD_PORT` | read-only dashboard listen port (defaults to `8000`) |
 | `XAI_OAUTH_CLIENT_ID` / `XAI_OAUTH_CLIENT_SECRET` | credentials for an optional xAI OAuth application |
 | `XAI_OAUTH_REDIRECT_URI` | public dashboard callback URL, ending in `/oauth/callback` |
