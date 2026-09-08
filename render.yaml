@@ -1,0 +1,21 @@
+services:
+  - type: worker
+    name: pumpguard-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    autoDeployTrigger: commit
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: GROK_API_KEY
+        sync: false
+      - key: DB_PATH
+        value: /var/data/pumpguard.db
+      - key: ENABLED_CHAINS
+        value: solana
+    disk:
+      name: pumpguard-data
+      mountPath: /var/data
+      sizeGB: 1
