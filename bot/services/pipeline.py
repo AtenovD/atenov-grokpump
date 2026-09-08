@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+import json
 import time
+from dataclasses import asdict
 
 import aiohttp
 from aiogram import Bot
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.config import config
 from bot.services.chains import chain_label, token_url
@@ -119,7 +122,9 @@ async def screen_token(
     return analysis
 
 
-async def broadcast_signal(bot: Bot, session: aiohttp.ClientSession, analysis: TokenAnalysis) -> None:
+async def broadcast_signal(
+    bot: Bot, session: aiohttp.ClientSession, storage: Storage, analysis: TokenAnalysis
+) -> None:
     if not config.alert_chat_id:
         return
     token = analysis.token
@@ -131,4 +136,14 @@ async def broadcast_signal(bot: Bot, session: aiohttp.ClientSession, analysis: T
         f"Position size: {analysis.risk.size_sol:.4f} SOL (dry-run)\n"
         f"{token_url(token.chain, token.mint)}"
     )
-    await bot.send_message(config.alert_chat_id, text, disable_web_page_preview=True)
+    snapshot_id = await storage.save_analysis_snapshot(
+        token.chain, token.mint, json.dumps(asdict(analysis), ensure_ascii=False)
+    )
+    keyboard = None
+    if config.xai_oauth_client_id and config.xai_oauth_redirect_uri and config.oauth_encryption_key:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🔎 Ask Grok", callback_data=f"oauth:ask:{snapshot_id}")
+        ]])
+    await bot.send_message(
+        config.alert_chat_id, text, disable_web_page_preview=True, reply_markup=keyboard
+    )

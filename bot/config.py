@@ -72,5 +72,11 @@ class Config:
 
     alert_chat_id: str | None = field(default_factory=lambda: os.getenv("ALERT_CHAT_ID") or None)
 
+    # Optional per-user Grok OAuth. This is separate from the screening API key.
+    xai_oauth_client_id: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_ID", ""))
+    xai_oauth_client_secret: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_SECRET", ""))
+    xai_oauth_redirect_uri: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_REDIRECT_URI", ""))
+    oauth_encryption_key: str = field(default_factory=lambda: os.getenv("OAUTH_ENCRYPTION_KEY", ""))
+
 
 config = Config()
