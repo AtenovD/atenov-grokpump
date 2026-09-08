@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import aiosqlite
 
@@ -70,6 +71,17 @@ CREATE TABLE IF NOT EXISTS signals (
     detail TEXT,
     created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS price_snapshots (
+    chain TEXT NOT NULL DEFAULT 'solana',
+    mint TEXT NOT NULL,
+    price REAL NOT NULL,
+    observed_at INTEGER NOT NULL,
+    PRIMARY KEY (chain, mint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_signals_created_at ON signals(created_at);
+CREATE INDEX IF NOT EXISTS idx_positions_open ON positions(status) WHERE status = 'open';
 """
 
 
@@ -177,6 +189,16 @@ class Storage:
             await self.db.execute(
                 "ALTER TABLE signals ADD COLUMN chain TEXT NOT NULL DEFAULT 'solana'"
             )
+
+    async def connect_readonly(self) -> None:
+        """Open a dashboard-safe connection that cannot issue database writes."""
+        path = Path(self._db_path).expanduser().resolve()
+        if path.exists():
+            self._db = await aiosqlite.connect(f"file:{path}?mode=ro", uri=True)
+        else:
+            # A missing fresh DB is represented as an empty in-memory database;
+            # the dashboard remains read-only and renders zero-state pages.
+            self._db = await aiosqlite.connect(":memory:")
 
     async def close(self) -> None:
         if self._db is not None:
@@ -404,6 +426,17 @@ class Storage:
         cursor = await self.db.execute("SELECT COUNT(*) FROM positions WHERE status = 'open'")
         (count,) = await cursor.fetchone()
         return count
+
+    async def record_price_snapshot(
+        self, mint: str, price: float, chain: str = "solana"
+    ) -> None:
+        await self.db.execute(
+            "INSERT INTO price_snapshots (chain, mint, price, observed_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(chain, mint) DO UPDATE SET price = excluded.price, "
+            "observed_at = excluded.observed_at",
+            (chain, mint, price, int(time.time())),
+        )
+        await self.db.commit()
 
     # --- signal log (for /stats) -------------------------------------------
 

@@ -2,4 +2,26 @@ services:
   bot:
     build: .
     env_file: .env
+    environment:
+      DB_PATH: /data/pumpguard.db
+    volumes:
+      - pumpguard-data:/data
     restart: unless-stopped
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    env_file: .env
+    environment:
+      DB_PATH: /data/pumpguard.db
+      DASHBOARD_PORT: ${DASHBOARD_PORT:-8000}
+    ports:
+      - "${DASHBOARD_PORT:-8000}:${DASHBOARD_PORT:-8000}"
+    volumes:
+      - pumpguard-data:/data:ro
+    depends_on:
+      - bot
+    restart: unless-stopped
+
+volumes:
+  pumpguard-data:
