@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="assets/pipeline-banner.svg" alt="PumpGuard Bot screening pipeline" width="100%">
+  <img src="assets/hero-banner.png" alt="grokbot-pumpfun" width="100%">
 </p>
-
-<h1 align="center">grokbot-pumpfun</h1>
 
 <p align="center">
   <a href="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
@@ -34,7 +32,15 @@
 
 This is a **research/screening tool**, not a trading bot. Every "buy" and "sell" is simulated (dry-run): no wallet, no signing, no on-chain transaction. Bonding-curve memecoins on pump.fun routinely lose their entire value; nothing here is financial advice, and there is no live executor to wire up — that's a deliberately different, much higher-stakes piece of software that this project does not include.
 
+<p align="center">
+  <img src="assets/dry-run-only.png" alt="Dry-run only — no wallets, no signing, no live execution" width="60%">
+</p>
+
 ## Features
+
+<p align="center">
+  <img src="assets/pipeline-diagram.png" alt="Screening pipeline: filter, analyze, evaluate, execute" width="100%">
+</p>
 
 - **Multi-chain launch monitor** — watches Solana/pump.fun, Base/Clanker, and Robinhood Chain/hood.fun through per-chain adapters, filters by age and buyer count before spending a single Grok call
 - **Five agents**, cheapest first:
@@ -143,6 +149,10 @@ The regular four-agent screening and digest continue to use only `GROK_API_KEY`.
 
 ## Read-only dashboard
 
+<p align="center">
+  <img src="assets/dashboard-mockup.png" alt="Live read-only dashboard" width="100%">
+</p>
+
 Run `python -m dashboard.main` or `uvicorn dashboard.main:app`. The dashboard opens the bot's SQLite file with SQLite `mode=ro`; it issues only `SELECT`/`PRAGMA` queries. The bot periodically stores the latest observed price for each open position so `/positions` can display it without starting another PumpPortal connection.
 
 Routes:
@@ -157,6 +167,10 @@ Routes:
 ## Chain data sources and pricing
 
 Contributor documentation: [add a new chain or launchpad adapter](docs/adding-a-chain.md).
+
+<p align="center">
+  <img src="assets/multi-chain.png" alt="One agent, multiple chains: Solana, Base, Robinhood" width="55%">
+</p>
 
 - **Solana / pump.fun** uses PumpPortal's public WebSocket for launches and per-mint trades. Pre-graduation price is `virtual SOL reserves / virtual token reserves`, preserving the existing behavior.
 - **Base / Clanker** polls Clanker's [official public token API](https://clanker.gitbook.io/clanker-documentation/api-reference/public/tokens) with `chainId=8453` and `includeMarket=true`. Clanker launches directly into Uniswap pools (v4 for current launches, with legacy v3 pools); the adapter uses the indexer's pool-derived `priceUsd`. Tokens are held until that price is non-zero, so the executor never invents an EVM entry price.
