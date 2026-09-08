@@ -23,6 +23,7 @@ class SolanaAdapter:
         self._last_update: dict[str, float] = {}
         self._watched: set[str] = set()
         self._want_resubscribe = asyncio.Event()
+        self.price_feed_healthy = False
 
     @staticmethod
     def parse_new_token(raw: dict) -> Token | None:
@@ -44,6 +45,7 @@ class SolanaAdapter:
         while True:
             try:
                 async with websockets.connect(self.data_url, ping_interval=20) as ws:
+                    self.price_feed_healthy = True
                     await ws.send(self._NEW_TOKEN_PAYLOAD)
                     logger.info("connected to Solana launch feed at %s", self.data_url)
                     async for raw_message in ws:
@@ -91,6 +93,7 @@ class SolanaAdapter:
                         if task is consumer:
                             task.result()
             except (websockets.exceptions.WebSocketException, OSError) as exc:
+                self.price_feed_healthy = False
                 logger.warning("Solana price feed dropped: %s; reconnecting in 5s", exc)
                 await asyncio.sleep(5)
 

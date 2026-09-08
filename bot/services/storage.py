@@ -105,6 +105,12 @@ CREATE TABLE IF NOT EXISTS analysis_snapshots (
     created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS runtime_health (
+    component TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    value REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_signals_created_at ON signals(created_at);
 CREATE INDEX IF NOT EXISTS idx_positions_open ON positions(status) WHERE status = 'open';
 """
@@ -540,6 +546,15 @@ class Storage:
             "ON CONFLICT(chain, mint) DO UPDATE SET price = excluded.price, "
             "observed_at = excluded.observed_at",
             (chain, mint, price, int(time.time())),
+        )
+        await self.db.commit()
+
+    async def set_runtime_health(self, component: str, status: str, value: float) -> None:
+        await self.db.execute(
+            "INSERT INTO runtime_health (component, status, value, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(component) DO UPDATE SET status=excluded.status, value=excluded.value, "
+            "updated_at=excluded.updated_at",
+            (component, status, value, int(time.time())),
         )
         await self.db.commit()
 

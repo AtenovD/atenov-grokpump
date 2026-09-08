@@ -25,6 +25,7 @@ class BaseAdapter:
         self._latest_price: dict[str, float] = {}
         self._baseline: set[str] | None = None
         self._emitted: set[str] = set()
+        self.price_feed_healthy = False
 
     async def _fetch(self, session: aiohttp.ClientSession, limit: int = 20) -> list[dict]:
         params = {
@@ -107,6 +108,8 @@ class BaseAdapter:
             while True:
                 try:
                     self._update_prices(await self._fetch(session))
+                    self.price_feed_healthy = True
                 except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+                    self.price_feed_healthy = False
                     logger.warning("Clanker price refresh failed: %s", exc)
                 await asyncio.sleep(self.poll_interval)
