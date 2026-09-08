@@ -5,7 +5,9 @@
 <h1 align="center">PumpGuard Bot</h1>
 
 <p align="center">
-  <a href="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun&amp;envs=BOT_TOKEN%2CADMIN_IDS%2CGROK_API_KEY"><img src="https://railway.com/button.svg" alt="Deploy on Railway"></a>
+  <a href="https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
 </p>
 
 <p align="center">
@@ -85,6 +87,12 @@ sudo systemctl enable --now pumpguard-dashboard
 ```bash
 docker compose up -d --build
 ```
+
+## Deploy on Railway or Render
+
+The deploy buttons above prompt for the three required values: `BOT_TOKEN`, `ADMIN_IDS`, and `GROK_API_KEY`. Both platform definitions mount a persistent volume and set `DB_PATH` to that volume so SQLite data survives deploys. Add any optional variables from `.env.example` after provisioning; enable additional chains only after setting their corresponding endpoints.
+
+Railway's current project-level Infrastructure as Code definition is `.railway/railway.ts`. To review and apply it manually, install the Railway CLI and run `npm install`, `railway link`, `railway config plan`, then `railway config apply`. Render reads `render.yaml` automatically when the repository is opened as a Blueprint.
 
 ## Configuration (`.env`)
 

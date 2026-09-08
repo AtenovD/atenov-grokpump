@@ -1,0 +1,7 @@
+{
+  "name": "grokbot-pumpfun-deploy",
+  "private": true,
+  "devDependencies": {
+    "railway": "3.11.0"
+  }
+}
