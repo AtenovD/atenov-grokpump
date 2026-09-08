@@ -2,12 +2,24 @@
   <img src="assets/pipeline-banner.svg" alt="PumpGuard Bot screening pipeline" width="100%">
 </p>
 
-<h1 align="center">PumpGuard Bot</h1>
+<h1 align="center">grokbot-pumpfun</h1>
 
 <p align="center">
   <a href="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun&amp;envs=BOT_TOKEN%2CADMIN_IDS%2CGROK_API_KEY"><img src="https://railway.com/button.svg" alt="Deploy on Railway"></a>
   <a href="https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/AtenovD/grokbot-pumpfun/stargazers"><img src="https://img.shields.io/github/stars/AtenovD/grokbot-pumpfun?style=for-the-badge&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/AtenovD/grokbot-pumpfun/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AtenovD/grokbot-pumpfun?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/AtenovD/grokbot-pumpfun/commits/main"><img src="https://img.shields.io/github/last-commit/AtenovD/grokbot-pumpfun?style=for-the-badge" alt="Last commit"></a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.12-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/Powered%20by-Grok-FF6B00?style=for-the-badge" alt="Powered by Grok">
+  <img src="https://img.shields.io/badge/chains-Solana%20%7C%20Base%20%7C%20Robinhood-9945FF?style=for-the-badge" alt="Multi-chain">
+  <img src="https://img.shields.io/badge/execution-dry--run%20only-brightgreen?style=for-the-badge" alt="Dry-run only">
 </p>
 
 <p align="center">
