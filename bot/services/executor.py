@@ -27,7 +27,10 @@ class DryRunExecutor:
     """
 
     async def buy(self, token: Token, size_sol: float) -> TradeResult:
-        price = max(token.sol_in_curve, 0.0001) / max(token.unique_buyers, 1)
+        price = token.reference_price
+        if price is None:
+            # Preserve the existing pump.fun dry-run entry calculation.
+            price = max(token.sol_in_curve, 0.0001) / max(token.unique_buyers or 1, 1)
         return TradeResult(ok=True, price=price, tx_hash=f"dryrun-buy-{token.mint[:8]}-{int(time.time())}")
 
     async def sell(self, mint: str, exit_price: float) -> TradeResult:

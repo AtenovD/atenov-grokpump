@@ -11,8 +11,7 @@ from aiogram import Bot
 from bot.config import config
 from bot.services import pipeline
 from bot.services.executor import DryRunExecutor
-from bot.services.monitor import stream_new_tokens
-from bot.services.price_feed import PriceFeed
+from bot.services.chains import ChainAdapter
 from bot.services.reputation import ReputationBook
 from bot.services.risk import RiskManager
 from bot.services.storage import Storage
@@ -55,19 +54,19 @@ class MarketPulse:
         return data
 
 
-async def run_monitor_loop(bot: Bot, storage: Storage, price_feed: PriceFeed) -> None:
-    """Consumes the launch feed, screens each token, opens dry-run positions."""
-    pulse = MarketPulse()
+async def _run_chain_monitor(
+    bot: Bot, storage: Storage, adapter: ChainAdapter, pulse: MarketPulse
+) -> None:
     risk = RiskManager(storage)
     reputation = ReputationBook(storage)
     executor = DryRunExecutor()
 
     async with aiohttp.ClientSession() as session:
-        async for token in stream_new_tokens():
+        async for token in adapter.stream_new_tokens():
             pulse.record_launch()
-            if await storage.is_seen(token.mint):
+            if await storage.is_seen(token.mint, token.chain):
                 continue
-            await storage.mark_seen(token.mint, token.symbol, token.name)
+            await storage.mark_seen(token.mint, token.symbol, token.name, token.chain)
 
             try:
                 analysis = await pipeline.screen_token(
@@ -78,27 +77,49 @@ async def run_monitor_loop(bot: Bot, storage: Storage, price_feed: PriceFeed) ->
                 continue
 
             if analysis is not None:
-                price_feed.watch(token.mint)
+                adapter.watch(token.mint)
                 await pipeline.broadcast_signal(bot, session, analysis)
 
 
+async def run_monitor_loop(
+    bot: Bot, storage: Storage, adapters: list[ChainAdapter] | ChainAdapter
+) -> None:
+    """Run one shared screening pipeline consumer per enabled chain adapter."""
+    adapter_list = adapters if isinstance(adapters, list) else [adapters]
+    pulse = MarketPulse()
+    await asyncio.gather(
+        *(_run_chain_monitor(bot, storage, adapter, pulse) for adapter in adapter_list)
+    )
+
+
 async def run_position_watcher(
-    storage: Storage, reputation: ReputationBook, price_feed: PriceFeed, check_interval_sec: int = 15
+    storage: Storage,
+    reputation: ReputationBook,
+    adapters: dict[str, ChainAdapter] | ChainAdapter,
+    check_interval_sec: int = 15,
 ) -> None:
     """Watches real bonding-curve prices for open positions and force-closes any
     position whose drawdown from entry hits STOP_LOSS_PCT — exactly the exit rule
     a live executor would need, run here against a real (but unexecuted) price."""
     executor = DryRunExecutor()
+    adapter_map = (
+        adapters if isinstance(adapters, dict) else {adapters.chain_id: adapters}
+    )
 
     # Positions may already be open from a previous run (state persists in sqlite) —
     # make sure the price feed is watching all of them, not just newly opened ones.
     for position in await storage.open_positions():
-        price_feed.watch(position.mint)
+        adapter = adapter_map.get(position.chain)
+        if adapter is not None:
+            adapter.watch(position.mint)
 
     while True:
         await asyncio.sleep(check_interval_sec)
         for position in await storage.open_positions():
-            price = price_feed.get_price(position.mint)
+            adapter = adapter_map.get(position.chain)
+            if adapter is None:
+                continue
+            price = adapter.get_price(position.mint)
             if price is None:
                 continue  # no trade observed yet for this mint — nothing to act on
 
@@ -110,11 +131,13 @@ async def run_position_watcher(
             pnl_sol = (result.price - position.entry_price) / position.entry_price * position.sol_spent
             pnl_pct = (result.price - position.entry_price) / position.entry_price * 100
 
-            await storage.close_position(position.mint, price, "stop_loss")
+            await storage.close_position(
+                position.mint, price, "stop_loss", chain=position.chain
+            )
             await storage.record_pnl_only(pnl_sol)
-            await reputation.record_outcome(position.creator, pnl_pct)
-            price_feed.unwatch(position.mint)
+            await reputation.record_outcome(position.creator, pnl_pct, position.chain)
+            adapter.unwatch(position.mint)
             logger.info(
-                "stop-loss closed %s: entry=%.10f exit=%.10f pnl=%.4f SOL (%.1f%%)",
-                position.mint[:8], position.entry_price, price, pnl_sol, pnl_pct,
+                "stop-loss closed %s:%s: entry=%.10f exit=%.10f pnl=%.4f (%.1f%%)",
+                position.chain, position.mint[:8], position.entry_price, price, pnl_sol, pnl_pct,
             )

@@ -5,7 +5,7 @@
 <h1 align="center">PumpGuard Bot</h1>
 
 <p align="center">
-  A Telegram bot that screens new pump.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book — then simulates the trade. No live execution, ever.
+  A Telegram bot that screens new pump.fun, Clanker, and hood.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book — then simulates the trade. No live execution, ever.
 </p>
 
 <p align="center">
@@ -18,14 +18,14 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 
 ## Features
 
-- **New-launch monitor** — subscribes to [PumpPortal](https://pumpportal.fun)'s public pump.fun WebSocket feed, filters by age and buyer count before spending a single Grok call
+- **Multi-chain launch monitor** — watches Solana/pump.fun, Base/Clanker, and Robinhood Chain/hood.fun through per-chain adapters, filters by age and buyer count before spending a single Grok call
 - **Five agents**, cheapest first:
   - **Researcher** — free, instant DB lookups before any Grok call: has this creator rugged before, does this name/symbol copy a token launched in the last few hours (copycat-of-a-trending-coin detection)
   - **Auditor** (Grok) — looks for wash trading / bundled buys in the trade and holder data
   - **Narrative** (Grok) — scores the meme's attention potential from its name/symbol
   - **Timing** (Grok) — judges the current window using only this bot's own observed launch/outcome rate (no external price feeds)
   - **Checker** (Grok, stronger model) — an adversarial final pass given all four prior verdicts, explicitly looking for a reason to reject
-- **Real price tracking** — open dry-run positions are watched against the actual bonding-curve price (via PumpPortal's per-token trade stream), not a random number
+- **Real price tracking** — open dry-run positions are watched against the chain's actual bonding-curve or DEX-pool price, not a random number
 - **Real stop-loss** — a position is force-closed the moment its real observed drawdown from entry crosses `STOP_LOSS_PCT`
 - **Circuit breaker on Grok** — after several consecutive failures, the pipeline stops calling Grok for a cooldown window instead of hammering a struggling API on every new launch
 - **Explainability digest** — the four agent verdicts are synthesized by Grok into one short, readable paragraph for the alert, instead of four raw JSON summaries
@@ -38,7 +38,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 
 ## Roadmap
 
-Not built yet, tracked as follow-up work: multi-chain support (Base via Clanker, Robinhood Chain via hood.fun, alongside Solana/pump.fun), and a read-only web dashboard showing the screening funnel.
+Not built yet, tracked as follow-up work: a read-only web dashboard showing the screening funnel.
 
 ## Stack
 
@@ -82,12 +82,25 @@ docker compose up -d --build
 | `GROK_API_KEY` | xAI API key — used only for the four screening agents |
 | `GROK_FAST_MODEL` / `GROK_CHECKER_MODEL` | models for the three cheap agents vs. the adversarial checker |
 | `DATA_WS_URL` | pump.fun launch feed (defaults to PumpPortal's public endpoint) |
+| `ENABLED_CHAINS` | comma-separated adapter list: `solana`, `base`, `robinhood` (defaults to `solana`) |
+| `BASE_DATA_URL` / `BASE_RPC_URL` | Clanker public API and Base RPC used for source verification/fallback |
+| `ROBINHOOD_DATA_URL` / `ROBINHOOD_RPC_URL` | hood.fun public indexer root and Robinhood Chain RPC used for source verification/fallback |
 | `MIN_LAUNCH_AGE_SECONDS` / `MIN_UNIQUE_BUYERS` | pre-filter before any Grok call is made |
 | `MAX_SOL_PER_TRADE` / `DAILY_LOSS_LIMIT_SOL` / `MAX_TRADES_PER_DAY` / `MAX_OPEN_POSITIONS` | risk manager limits |
 | `RUG_LOSS_PCT` / `BLOCK_CREATOR_AFTER_RUGS` / `FORGET_CREATORS_AFTER_DAYS` | reputation book tuning |
 | `STOP_LOSS_PCT` | real drawdown from entry that force-closes a dry-run position |
 | `GROK_BREAKER_FAILURE_THRESHOLD` / `GROK_BREAKER_COOLDOWN_SECONDS` | circuit breaker tuning for Grok outages |
 | `ALERT_CHAT_ID` | optional channel/group every passing signal is also posted to |
+
+## Chain data sources and pricing
+
+- **Solana / pump.fun** uses PumpPortal's public WebSocket for launches and per-mint trades. Pre-graduation price is `virtual SOL reserves / virtual token reserves`, preserving the existing behavior.
+- **Base / Clanker** polls Clanker's [official public token API](https://clanker.gitbook.io/clanker-documentation/api-reference/public/tokens) with `chainId=8453` and `includeMarket=true`. Clanker launches directly into Uniswap pools (v4 for current launches, with legacy v3 pools); the adapter uses the indexer's pool-derived `priceUsd`. Tokens are held until that price is non-zero, so the executor never invents an EVM entry price.
+- **Robinhood Chain / hood.fun** polls hood.fun's own read-only `/api/board` indexer. Before graduation it calculates the native ETH price from the documented constant-product virtual reserves, `virtualEth / virtualTokens`; after migration it uses `pairPriceWei`, which is sourced from the official Uniswap v3 pool. Robinhood Chain is Arbitrum Orbit chain `4663`; its public RPC is rate-limited, so production operators should set a dedicated `ROBINHOOD_RPC_URL`.
+
+The REST polling interval is five seconds. `BASE_RPC_URL` and `ROBINHOOD_RPC_URL` are intentionally read-only configuration: they provide a stable verification/fallback endpoint without adding wallets, signing, or any live execution path.
+
+The two EVM indexers do not expose an authoritative unique-buyer count in their launch records, so that one pre-filter is skipped when the adapter reports the value as unavailable; all remaining researcher, agent, checker, risk, and dry-run stages are unchanged. Solana continues to enforce `MIN_UNIQUE_BUYERS` from PumpPortal data.
 
 ## Admin panel
 

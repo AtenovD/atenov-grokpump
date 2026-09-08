@@ -8,6 +8,7 @@ from bot.config import config
 from bot.keyboards import back_to_menu_keyboard, language_keyboard, main_menu_keyboard
 from bot.locales.texts import t
 from bot.services.storage import Storage
+from bot.services.chains import chain_label
 
 router = Router(name="start")
 
@@ -75,7 +76,11 @@ async def on_positions(callback: CallbackQuery, storage: Storage) -> None:
     lines = [t(lang, "positions_title"), ""]
     for p in positions:
         lines.append(
-            t(lang, "position_item", symbol=p.symbol or p.mint[:8], entry=p.entry_price, size=p.sol_spent, score=p.score)
+            t(
+                lang, "position_item", chain=chain_label(p.chain),
+                symbol=p.symbol or p.mint[:8], entry=p.entry_price,
+                size=p.sol_spent, score=p.score,
+            )
         )
     await callback.message.edit_text("\n".join(lines), reply_markup=back_to_menu_keyboard(lang))
     await callback.answer()

@@ -16,11 +16,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_back_menu": "⬅ В меню",
         "positions_title": "📂 Открытые позиции (dry-run):",
         "positions_empty": "Сейчас нет открытых позиций.",
-        "position_item": "• {symbol} — вход {entry:.6f}, размер {size:.4f} SOL, score {score:.2f}",
+        "position_item": "• {chain} · {symbol} — вход {entry:.6f}, размер {size:.4f}, score {score:.2f}",
         "stats": (
             "📊 Статистика\n\n"
             "Пользователей: {users_total}\n"
             "Проверено токенов за 24ч: {screened_24h}\n"
+            "По сетям за 24ч: {chains_24h}\n"
             "Куплено (dry-run) за 24ч: {bought_24h}\n"
             "Сделок сегодня: {trades_today}\n"
             "PnL за сегодня: {pnl_today:+.4f} SOL\n"
@@ -77,11 +78,12 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_back_menu": "⬅ Menu",
         "positions_title": "📂 Open positions (dry-run):",
         "positions_empty": "No open positions right now.",
-        "position_item": "• {symbol} — entry {entry:.6f}, size {size:.4f} SOL, score {score:.2f}",
+        "position_item": "• {chain} · {symbol} — entry {entry:.6f}, size {size:.4f}, score {score:.2f}",
         "stats": (
             "📊 Stats\n\n"
             "Users: {users_total}\n"
             "Tokens screened (24h): {screened_24h}\n"
+            "By chain (24h): {chains_24h}\n"
             "Bought (dry-run, 24h): {bought_24h}\n"
             "Trades today: {trades_today}\n"
             "PnL today: {pnl_today:+.4f} SOL\n"
