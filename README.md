@@ -24,6 +24,33 @@
   A Telegram bot that screens new pump.fun, Clanker, and hood.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book — then simulates the trade. No live execution, ever.
 </p>
 
+<table align="center">
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/deploy-000000?style=for-the-badge&logo=railway&logoColor=white" alt="deploy"></td>
+    <td align="center"><a href="https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun&envs=BOT_TOKEN%2CADMIN_IDS%2CGROK_API_KEY"><img src="https://img.shields.io/badge/RAILWAY-one--click-0B0D0E?style=for-the-badge&logo=railway&logoColor=%23B14EFF" alt="Railway one-click deploy"></a></td>
+    <td align="center"><img src="https://img.shields.io/badge/deploy-000000?style=for-the-badge&logo=render&logoColor=white" alt="deploy"></td>
+    <td align="center"><a href="https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun"><img src="https://img.shields.io/badge/RENDER-blueprint-00C7B7?style=for-the-badge&logo=render&logoColor=white" alt="Render blueprint deploy"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/self--host-000000?style=for-the-badge&logo=docker&logoColor=white" alt="self-host"></td>
+    <td align="center"><a href="#deploy-with-docker"><img src="https://img.shields.io/badge/DOCKER-compose%20up-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose"></a></td>
+    <td align="center"><img src="https://img.shields.io/badge/self--host-000000?style=for-the-badge&logo=linux&logoColor=white" alt="self-host"></td>
+    <td align="center"><a href="#deploy-on-a-vps-systemd"><img src="https://img.shields.io/badge/VPS-systemd-F7A41D?style=for-the-badge&logo=linux&logoColor=white" alt="VPS systemd deploy"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/install-000000?style=for-the-badge&logo=python&logoColor=white" alt="install"></td>
+    <td align="center"><a href="#quick-start"><img src="https://img.shields.io/badge/PIP-requirements.txt-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="pip install"></a></td>
+    <td align="center"><img src="https://img.shields.io/badge/dashboard-000000?style=for-the-badge&logo=fastapi&logoColor=white" alt="dashboard"></td>
+    <td align="center"><a href="#read-only-dashboard"><img src="https://img.shields.io/badge/READ--ONLY-live%20stats-009688?style=for-the-badge" alt="read-only dashboard"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/webhooks-000000?style=for-the-badge&logo=zapier&logoColor=white" alt="webhooks"></td>
+    <td align="center"><a href="docs/webhook-schema.md"><img src="https://img.shields.io/badge/WEBHOOKS-v1%20schema-D9364A?style=for-the-badge" alt="webhook schema docs"></a></td>
+    <td align="center"><img src="https://img.shields.io/badge/add%20a%20chain-000000?style=for-the-badge" alt="add a chain"></td>
+    <td align="center"><a href="docs/adding-a-chain.md"><img src="https://img.shields.io/badge/CONTRIBUTOR%20DOCS-adapters-6B7280?style=for-the-badge" alt="adding a chain adapter"></a></td>
+  </tr>
+</table>
+
 <p align="center">
   <img src="assets/chat-preview.svg" alt="PumpGuard Bot chat preview" width="100%">
 </p>
