@@ -1,0 +1,2 @@
+# Optional local semantic copycat detection. The bot falls back to exact matching without it.
+sentence-transformers==3.3.1

@@ -20,7 +20,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 
 - **Multi-chain launch monitor** — watches Solana/pump.fun, Base/Clanker, and Robinhood Chain/hood.fun through per-chain adapters, filters by age and buyer count before spending a single Grok call
 - **Five agents**, cheapest first:
-  - **Researcher** — free, instant DB lookups before any Grok call: has this creator rugged before, does this name/symbol copy a token launched in the last few hours (copycat-of-a-trending-coin detection)
+  - **Researcher** — free DB lookups before any Grok call: has this creator rugged before, and does this name/symbol exactly or semantically copy a recent token
   - **Auditor** (Grok) — looks for wash trading / bundled buys in the trade and holder data
   - **Narrative** (Grok) — scores the meme's attention potential from its name/symbol
   - **Timing** (Grok) — judges the current window using only this bot's own observed launch/outcome rate (no external price feeds)
@@ -47,6 +47,8 @@ Python 3.12, [aiogram 3](https://docs.aiogram.dev/), aiohttp, `websockets`, aios
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+# Optional local all-MiniLM-L6-v2 semantic copycat matching:
+pip install -r requirements-semantic.txt
 cp .env.example .env  # fill in BOT_TOKEN, ADMIN_IDS, GROK_API_KEY
 python -m bot.main
 ```
@@ -92,6 +94,7 @@ docker compose up -d --build
 | `BASE_DATA_URL` / `BASE_RPC_URL` | Clanker public API and Base RPC used for source verification/fallback |
 | `ROBINHOOD_DATA_URL` / `ROBINHOOD_RPC_URL` | hood.fun public indexer root and Robinhood Chain RPC used for source verification/fallback |
 | `MIN_LAUNCH_AGE_SECONDS` / `MIN_UNIQUE_BUYERS` | pre-filter before any Grok call is made |
+| `COPYCAT_SIMILARITY_THRESHOLD` | cosine threshold for optional semantic copycat matching (default `0.85`) |
 | `MAX_SOL_PER_TRADE` / `DAILY_LOSS_LIMIT_SOL` / `MAX_TRADES_PER_DAY` / `MAX_OPEN_POSITIONS` | risk manager limits |
 | `RUG_LOSS_PCT` / `BLOCK_CREATOR_AFTER_RUGS` / `FORGET_CREATORS_AFTER_DAYS` | reputation book tuning |
 | `STOP_LOSS_PCT` | real drawdown from entry that force-closes a dry-run position |
@@ -120,6 +123,8 @@ Routes:
 The REST polling interval is five seconds. `BASE_RPC_URL` and `ROBINHOOD_RPC_URL` are intentionally read-only configuration: they provide a stable verification/fallback endpoint without adding wallets, signing, or any live execution path.
 
 The two EVM indexers do not expose an authoritative unique-buyer count in their launch records, so that one pre-filter is skipped when the adapter reports the value as unavailable; all remaining researcher, agent, checker, risk, and dry-run stages are unchanged. Solana continues to enforce `MIN_UNIQUE_BUYERS` from PumpPortal data.
+
+Semantic copycat detection is local and optional. When `requirements-semantic.txt` is installed, `sentence-transformers/all-MiniLM-L6-v2` is loaded lazily on the first researcher run and compared only with tokens from the same chain and six-hour lookback. If the package or model is unavailable, the bot logs one warning and continues with the existing normalized exact matcher.
 
 ## Admin panel
 
