@@ -5,9 +5,9 @@
 <h1 align="center">PumpGuard Bot</h1>
 
 <p align="center">
-  <a href="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <a href="https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FAtenovD%2Fatenov-grokpump&amp;envs=BOT_TOKEN%2CADMIN_IDS%2CGROK_API_KEY"><img src="https://railway.com/button.svg" alt="Deploy on Railway"></a>
-  <a href="https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAtenovD%2Fatenov-grokpump"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
+  <a href="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/grokbot-pumpfun/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun&amp;envs=BOT_TOKEN%2CADMIN_IDS%2CGROK_API_KEY"><img src="https://railway.com/button.svg" alt="Deploy on Railway"></a>
+  <a href="https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAtenovD%2Fgrokbot-pumpfun"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
 </p>
 
 <p align="center">
