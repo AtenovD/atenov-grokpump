@@ -394,6 +394,17 @@ class Storage:
                 matches.append(mint)
         return matches
 
+    async def recent_token_names(
+        self, since_seconds: int, exclude_mint: str, chain: str = "solana"
+    ) -> list[tuple[str, str | None, str | None]]:
+        cutoff = int(time.time()) - since_seconds
+        cursor = await self.db.execute(
+            "SELECT mint, symbol, name FROM seen_tokens "
+            "WHERE chain = ? AND first_seen_at >= ? AND mint != ?",
+            (chain, cutoff, exclude_mint),
+        )
+        return [(str(row[0]), row[1], row[2]) for row in await cursor.fetchall()]
+
     # --- reputation book ---------------------------------------------------
 
     async def creator_rugs(self, creator: str, chain: str = "solana") -> int:

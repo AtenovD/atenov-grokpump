@@ -8,6 +8,7 @@ from bot.config import config
 from bot.services.grok_client import ask_grok
 from bot.services.models import AgentVerdict, Token
 from bot.services.sanitize import sanitize_token_fields
+from bot.services.semantic_copycat import find_semantic_copycats
 from bot.services.storage import Storage
 
 # How far back "find_similar_recent" looks for a copycat reusing a name/symbol.
@@ -105,6 +106,19 @@ async def run_researcher(storage: Storage, token: Token) -> AgentVerdict:
         flags.append("possible_copycat")
         notes.append(f"name/symbol matches {len(copycats)} other token(s) launched in the last "
                      f"{COPYCAT_WINDOW_SECONDS // 3600}h — possible copycat of a trending coin")
+
+    semantic_copycats = await find_semantic_copycats(
+        storage, token.symbol, token.name, COPYCAT_WINDOW_SECONDS, token.mint,
+        token.chain, config.copycat_similarity_threshold,
+    )
+    semantic_only = [(mint, score) for mint, score in semantic_copycats if mint not in copycats]
+    if semantic_only:
+        flags.append("semantic_copycat")
+        top_score = max(score for _, score in semantic_only)
+        notes.append(
+            f"meaning is similar to {len(semantic_only)} recent token(s) "
+            f"(top cosine similarity {top_score:.2f})"
+        )
 
     approve = "creator_has_prior_rugs" not in flags
     score = 0.3 if flags else 0.8

@@ -57,6 +57,9 @@ class Config:
     )
     min_launch_age_seconds: int = field(default_factory=lambda: int(os.getenv("MIN_LAUNCH_AGE_SECONDS", "60")))
     min_unique_buyers: int = field(default_factory=lambda: int(os.getenv("MIN_UNIQUE_BUYERS", "5")))
+    copycat_similarity_threshold: float = field(
+        default_factory=lambda: float(os.getenv("COPYCAT_SIMILARITY_THRESHOLD", "0.85"))
+    )
 
     # Risk manager — five independent limits, checked before any signal is surfaced.
     max_sol_per_trade: float = field(default_factory=lambda: float(os.getenv("MAX_SOL_PER_TRADE", "0.5")))
