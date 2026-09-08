@@ -16,6 +16,7 @@ from bot.services.reputation import ReputationBook
 from bot.services.scheduler import run_monitor_loop, run_position_watcher
 from bot.services.storage import Storage
 from bot.services.weekly_digest import run_weekly_digest_loop
+from bot.services.runtime_health import run_runtime_health_reporter
 
 
 async def main() -> None:
@@ -42,6 +43,7 @@ async def main() -> None:
     price_feed_tasks = [asyncio.create_task(adapter.run()) for adapter in adapters]
     monitor_task = asyncio.create_task(run_monitor_loop(bot, storage, adapters))
     watcher_task = asyncio.create_task(run_position_watcher(storage, reputation, adapter_map))
+    health_task = asyncio.create_task(run_runtime_health_reporter(storage, adapters))
     digest_task = (
         asyncio.create_task(run_weekly_digest_loop(bot, storage, config.public_digest_chat_id))
         if config.public_digest_chat_id else None
@@ -54,6 +56,7 @@ async def main() -> None:
             task.cancel()
         monitor_task.cancel()
         watcher_task.cancel()
+        health_task.cancel()
         if digest_task is not None:
             digest_task.cancel()
         await storage.close()

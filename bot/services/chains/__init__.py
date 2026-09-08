@@ -14,6 +14,7 @@ CHAIN_LABELS = {
 
 class ChainAdapter(Protocol):
     chain_id: str
+    price_feed_healthy: bool
 
     def stream_new_tokens(self) -> AsyncIterator[Token]: ...
     def watch(self, mint: str) -> None: ...

@@ -24,6 +24,7 @@ class RobinhoodAdapter:
         self._latest_price: dict[str, float] = {}
         self._baseline: set[str] | None = None
         self._emitted: set[str] = set()
+        self.price_feed_healthy = False
 
     async def _fetch(self, session: aiohttp.ClientSession) -> dict:
         async with session.get(
@@ -103,6 +104,8 @@ class RobinhoodAdapter:
                 try:
                     payload = await self._fetch(session)
                     self._update_prices(payload.get("tokens", []))
+                    self.price_feed_healthy = True
                 except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError) as exc:
+                    self.price_feed_healthy = False
                     logger.warning("hood.fun price refresh failed: %s", exc)
                 await asyncio.sleep(self.poll_interval)

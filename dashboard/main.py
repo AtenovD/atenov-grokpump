@@ -7,7 +7,7 @@ from pathlib import Path
 import uvicorn
 import aiohttp
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from bot.services.storage import Storage
@@ -15,6 +15,7 @@ from bot.services.oauth import (
     OAuthError, OAuthSettings, XaiOAuthClient, complete_oauth_callback,
 )
 from dashboard.queries import read_backtest, read_funnel, read_open_positions, read_stats
+from dashboard.metrics import render_metrics
 
 WINDOWS = {"1h": 3600, "24h": 86400, "7d": 7 * 86400}
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -93,6 +94,13 @@ def create_app(db_path: str | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return HTMLResponse(
             "<h1>Grok connected</h1><p>You can close this page and return to Telegram.</p>"
+        )
+
+    @app.get("/metrics")
+    async def metrics(request: Request):
+        return Response(
+            await render_metrics(request.app.state.storage),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
         )
 
     return app

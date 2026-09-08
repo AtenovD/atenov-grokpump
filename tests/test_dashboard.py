@@ -21,7 +21,7 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
         try:
             app = create_app(path)
             async with app.router.lifespan_context(app):
-                for route_path in ("/", "/positions", "/api/stats"):
+                for route_path in ("/", "/positions", "/api/stats", "/metrics"):
                     route = next(route for route in app.routes if route.path == route_path)
                     request = Request({
                         "type": "http", "app": app, "method": "GET", "path": route_path,
@@ -33,6 +33,8 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
                     )
                     if hasattr(response, "body"):
                         self.assertTrue(response.body)
+                    if route_path == "/metrics":
+                        self.assertIn(b"pumpguard_open_positions 0.0", response.body)
                 self.assertEqual((await read_stats(app.state.storage))["screened_24h"], 0)
                 self.assertEqual(await read_funnel(app.state.storage, 3600), [])
                 self.assertEqual((await read_backtest(app.state.storage, 3600))["total_signals"], 0)
@@ -54,6 +56,8 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
             )
             await writer.record_price_snapshot("mint", 1.25)
             await writer.log_signal("mint", "TKN", 0.8, "executor", "bought")
+            await writer.set_runtime_health("circuit_breaker", "open", 1.0)
+            await writer.set_runtime_health("price_feed:solana", "healthy", 1.0)
             await writer.close()
 
             reader = Storage(path)
@@ -63,6 +67,12 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(positions[0]["chain"], "solana")
             self.assertEqual(positions[0]["current_price"], 1.25)
             self.assertEqual((await read_stats(reader))["bought_24h"], 1)
+            from dashboard.metrics import render_metrics
+            metrics = await render_metrics(reader)
+            self.assertIn(b'pumpguard_signals_screened_total{stage="executor"} 1.0', metrics)
+            self.assertIn(b'pumpguard_signals_bought_total{stage="executor"} 1.0', metrics)
+            self.assertIn(b'pumpguard_circuit_breaker_state{state="open"} 1.0', metrics)
+            self.assertIn(b'pumpguard_price_feed_healthy{chain="solana"} 1.0', metrics)
             await reader.close()
         finally:
             os.unlink(path)

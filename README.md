@@ -45,6 +45,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Button-only Telegram frontend**: RU/EN language picker, stats, open positions, optional mandatory-subscription gate, button-driven admin panel — no slash commands beyond `/start`
 - **Read-only web dashboard** — responsive funnel, recorded-performance summary, open positions, and a polling JSON stats endpoint without a second market-data connection
 - **Versioned signal webhooks** — optionally POST every passing `TokenAnalysis` to multiple integrations with one retry and a stable v1 JSON envelope
+- **Prometheus metrics** — dashboard `/metrics` exposes cumulative screening outcomes, positions, Grok circuit-breaker state, and per-chain price-feed health
 
 ## Stack
 
@@ -137,6 +138,7 @@ Routes:
 - `/` — 1h/24h/7d screening funnel plus recorded backtest metrics
 - `/positions` — open dry-run positions and the latest bot-written price snapshot
 - `/api/stats` — JSON equivalent of the Telegram statistics view, polled by the dashboard
+- `/metrics` — Prometheus text exposition for operational monitoring
 
 **Do not expose analytics routes publicly without authentication in front of them.** If OAuth is enabled, the callback must remain publicly reachable over HTTPS; configure a reverse proxy that allows `/oauth/callback` while protecting the analytics routes.
 
