@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.config import config
-from bot.handlers import admin, start
+from bot.handlers import admin, oauth, start
 from bot.middlewares.subscription import SubscriptionMiddleware
 from bot.services.chains import build_adapters
 from bot.services.reputation import ReputationBook
@@ -32,6 +32,7 @@ async def main() -> None:
     dp.callback_query.outer_middleware(subscription_middleware)
 
     dp.include_router(admin.router)
+    dp.include_router(oauth.router)
     dp.include_router(start.router)
 
     reputation = ReputationBook(storage)

@@ -78,7 +78,7 @@ async def _run_chain_monitor(
 
             if analysis is not None:
                 adapter.watch(token.mint)
-                await pipeline.broadcast_signal(bot, session, analysis)
+                await pipeline.broadcast_signal(bot, session, storage, analysis)
 
 
 async def run_monitor_loop(

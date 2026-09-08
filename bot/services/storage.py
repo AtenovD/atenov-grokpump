@@ -80,6 +80,31 @@ CREATE TABLE IF NOT EXISTS price_snapshots (
     PRIMARY KEY (chain, mint)
 );
 
+CREATE TABLE IF NOT EXISTS oauth_pending (
+    state TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    code_verifier TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+    user_id INTEGER PRIMARY KEY,
+    access_token_encrypted TEXT NOT NULL,
+    refresh_token_encrypted TEXT,
+    expires_at INTEGER NOT NULL,
+    token_type TEXT NOT NULL DEFAULT 'Bearer',
+    scope TEXT,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS analysis_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chain TEXT NOT NULL,
+    mint TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_signals_created_at ON signals(created_at);
 CREATE INDEX IF NOT EXISTS idx_positions_open ON positions(status) WHERE status = 'open';
 """
@@ -106,6 +131,16 @@ class Position:
     exit_price: float | None = None
     closed_at: int | None = None
     close_reason: str | None = None
+
+
+@dataclass
+class OAuthTokenRecord:
+    user_id: int
+    access_token_encrypted: str
+    refresh_token_encrypted: str | None
+    expires_at: int
+    token_type: str
+    scope: str | None
 
 
 class Storage:
@@ -236,6 +271,65 @@ class Storage:
     async def all_user_ids(self) -> list[int]:
         cursor = await self.db.execute("SELECT user_id FROM users")
         return [r[0] for r in await cursor.fetchall()]
+
+    # --- xAI OAuth ------------------------------------------------------
+
+    async def create_oauth_pending(self, state: str, user_id: int, code_verifier: str) -> None:
+        await self.db.execute(
+            "INSERT INTO oauth_pending (state, user_id, code_verifier, created_at) VALUES (?, ?, ?, ?)",
+            (state, user_id, code_verifier, int(time.time())),
+        )
+        await self.db.commit()
+
+    async def consume_oauth_pending(self, state: str, ttl_seconds: int = 600) -> tuple[int, str] | None:
+        now = int(time.time())
+        await self.db.execute("DELETE FROM oauth_pending WHERE created_at < ?", (now - ttl_seconds,))
+        cursor = await self.db.execute(
+            "DELETE FROM oauth_pending WHERE state = ? AND created_at >= ? RETURNING user_id, code_verifier",
+            (state, now - ttl_seconds),
+        )
+        row = await cursor.fetchone()
+        await self.db.commit()
+        return (int(row[0]), str(row[1])) if row else None
+
+    async def store_oauth_tokens(
+        self, user_id: int, access_token_encrypted: str,
+        refresh_token_encrypted: str | None, expires_at: int,
+        token_type: str = "Bearer", scope: str | None = None,
+    ) -> None:
+        now = int(time.time())
+        await self.db.execute(
+            "INSERT INTO oauth_tokens (user_id, access_token_encrypted, refresh_token_encrypted, "
+            "expires_at, token_type, scope, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET access_token_encrypted=excluded.access_token_encrypted, "
+            "refresh_token_encrypted=excluded.refresh_token_encrypted, expires_at=excluded.expires_at, "
+            "token_type=excluded.token_type, scope=excluded.scope, updated_at=excluded.updated_at",
+            (user_id, access_token_encrypted, refresh_token_encrypted, expires_at, token_type, scope, now),
+        )
+        await self.db.commit()
+
+    async def get_oauth_tokens(self, user_id: int) -> OAuthTokenRecord | None:
+        cursor = await self.db.execute(
+            "SELECT user_id, access_token_encrypted, refresh_token_encrypted, expires_at, token_type, scope "
+            "FROM oauth_tokens WHERE user_id = ?", (user_id,),
+        )
+        row = await cursor.fetchone()
+        return OAuthTokenRecord(*row) if row else None
+
+    async def save_analysis_snapshot(self, chain: str, mint: str, payload: str) -> int:
+        cursor = await self.db.execute(
+            "INSERT INTO analysis_snapshots (chain, mint, payload, created_at) VALUES (?, ?, ?, ?)",
+            (chain, mint, payload, int(time.time())),
+        )
+        await self.db.commit()
+        return int(cursor.lastrowid)
+
+    async def get_analysis_snapshot(self, snapshot_id: int) -> str | None:
+        cursor = await self.db.execute(
+            "SELECT payload FROM analysis_snapshots WHERE id = ?", (snapshot_id,)
+        )
+        row = await cursor.fetchone()
+        return str(row[0]) if row else None
 
     # --- required channels ----------------------------------------------
 

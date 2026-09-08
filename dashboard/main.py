@@ -5,11 +5,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
+import aiohttp
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from bot.services.storage import Storage
+from bot.services.oauth import (
+    OAuthError, OAuthSettings, XaiOAuthClient, complete_oauth_callback,
+)
 from dashboard.queries import read_backtest, read_funnel, read_open_positions, read_stats
 
 WINDOWS = {"1h": 3600, "24h": 86400, "7d": 7 * 86400}
@@ -17,9 +21,11 @@ TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
 def create_app(db_path: str | None = None) -> FastAPI:
+    resolved_db_path = db_path or os.getenv("DB_PATH", "pumpguard.db")
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        storage = Storage(db_path or os.getenv("DB_PATH", "pumpguard.db"))
+        storage = Storage(resolved_db_path)
         await storage.connect_readonly()
         app.state.storage = storage
         try:
@@ -59,6 +65,35 @@ def create_app(db_path: str | None = None) -> FastAPI:
     @app.get("/api/stats")
     async def api_stats(request: Request):
         return await read_stats(request.app.state.storage)
+
+    @app.get("/oauth/callback", response_class=HTMLResponse)
+    async def oauth_callback(code: str = "", state: str = "", error: str = ""):
+        if error:
+            raise HTTPException(status_code=400, detail="xAI authorization was denied")
+        if not code or not state:
+            raise HTTPException(status_code=400, detail="missing OAuth code or state")
+        settings = OAuthSettings(
+            os.getenv("XAI_OAUTH_CLIENT_ID", ""),
+            os.getenv("XAI_OAUTH_CLIENT_SECRET", ""),
+            os.getenv("XAI_OAUTH_REDIRECT_URI", ""),
+            os.getenv("OAUTH_ENCRYPTION_KEY", ""),
+        )
+        try:
+            client = XaiOAuthClient(settings)
+            # Analytics routes retain their SQLite mode=ro connection. This narrow
+            # callback uses a short-lived writer solely for the OAuth tables.
+            writer = Storage(resolved_db_path)
+            await writer.connect()
+            try:
+                async with aiohttp.ClientSession() as session:
+                    await complete_oauth_callback(writer, client, session, state, code)
+            finally:
+                await writer.close()
+        except OAuthError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return HTMLResponse(
+            "<h1>Grok connected</h1><p>You can close this page and return to Telegram.</p>"
+        )
 
     return app
 

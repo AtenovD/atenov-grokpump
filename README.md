@@ -29,6 +29,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Real stop-loss** — a position is force-closed the moment its real observed drawdown from entry crosses `STOP_LOSS_PCT`
 - **Circuit breaker on Grok** — after several consecutive failures, the pipeline stops calling Grok for a cooldown window instead of hammering a struggling API on every new launch
 - **Explainability digest** — the four agent verdicts are synthesized by Grok into one short, readable paragraph for the alert, instead of four raw JSON summaries
+- **Optional user Grok OAuth** — users can connect their own Grok account with authorization-code PKCE and request a fresh, detailed second opinion for a signal; encrypted user tokens never replace the bot's core `GROK_API_KEY` pipeline
 - **Prompt-injection resistant** — token symbol/name/description are attacker-controlled; they're sanitized and every agent prompt explicitly frames them as data, not instructions, before anything reaches Grok
 - **Risk manager** — five independent limits: max SOL per trade, daily loss limit, max trades/day, max open positions, stop-loss — pure arithmetic, no model involved, and the last gate before a (simulated) trade
 - **Reputation book** — creators are blocked after their tracked launches rug, forgotten after a configurable number of days
@@ -98,6 +99,15 @@ docker compose up -d --build
 | `GROK_BREAKER_FAILURE_THRESHOLD` / `GROK_BREAKER_COOLDOWN_SECONDS` | circuit breaker tuning for Grok outages |
 | `ALERT_CHAT_ID` | optional channel/group every passing signal is also posted to |
 | `DASHBOARD_PORT` | read-only dashboard listen port (defaults to `8000`) |
+| `XAI_OAUTH_CLIENT_ID` / `XAI_OAUTH_CLIENT_SECRET` | credentials for an optional xAI OAuth application |
+| `XAI_OAUTH_REDIRECT_URI` | public dashboard callback URL, ending in `/oauth/callback` |
+| `OAUTH_ENCRYPTION_KEY` | Fernet key used to encrypt OAuth access and refresh tokens at rest |
+
+## Optional Grok account connection
+
+Registering an OAuth application is separate from funding an xAI API account and does not itself buy or consume API credits. Set the four `XAI_OAUTH_*`/`OAUTH_ENCRYPTION_KEY` variables above, register the exact redirect URI with xAI, and expose the dashboard callback over HTTPS. Users can then tap **🔐 Connect Grok account**. The bot stores the short-lived PKCE request for ten minutes, encrypts returned tokens with Fernet, and refreshes an expired access token before an **🔎 Ask Grok** request.
+
+The regular four-agent screening and digest continue to use only `GROK_API_KEY`. User OAuth tokens are used exclusively for the user-triggered second opinion. Dashboard analytics still use a read-only SQLite connection; `/oauth/callback` opens a short-lived writer limited to completing the authorization flow.
 
 ## Read-only dashboard
 
@@ -109,7 +119,7 @@ Routes:
 - `/positions` — open dry-run positions and the latest bot-written price snapshot
 - `/api/stats` — JSON equivalent of the Telegram statistics view, polled by the dashboard
 
-**Do not expose the dashboard port publicly without authentication in front of it.** Put it behind your own VPN or an authenticated nginx/Caddy reverse proxy; authentication is deliberately outside the FastAPI app.
+**Do not expose analytics routes publicly without authentication in front of them.** If OAuth is enabled, the callback must remain publicly reachable over HTTPS; configure a reverse proxy that allows `/oauth/callback` while protecting the analytics routes.
 
 ## Chain data sources and pricing
 

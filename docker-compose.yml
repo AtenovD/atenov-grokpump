@@ -18,7 +18,8 @@ services:
     ports:
       - "${DASHBOARD_PORT:-8000}:${DASHBOARD_PORT:-8000}"
     volumes:
-      - pumpguard-data:/data:ro
+      # OAuth callback writes encrypted tokens; analytics routes still use SQLite mode=ro.
+      - pumpguard-data:/data
     depends_on:
       - bot
     restart: unless-stopped

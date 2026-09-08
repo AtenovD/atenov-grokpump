@@ -20,6 +20,7 @@ def main_menu_keyboard(lang: str, is_admin: bool) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(text=t(lang, "btn_stats"), callback_data="menu:stats")],
         [InlineKeyboardButton(text=t(lang, "btn_positions"), callback_data="menu:positions")],
+        [InlineKeyboardButton(text=t(lang, "btn_connect_grok"), callback_data="oauth:connect")],
     ]
     if is_admin:
         rows.append([InlineKeyboardButton(text="🛠 Admin panel", callback_data="admin:open")])
