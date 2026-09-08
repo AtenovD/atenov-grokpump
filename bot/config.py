@@ -17,6 +17,10 @@ def _parse_chains(raw: str) -> tuple[str, ...]:
     return chains or ("solana",)
 
 
+def _parse_urls(raw: str) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(value.strip() for value in raw.split(",") if value.strip()))
+
+
 @dataclass(frozen=True)
 class Config:
     bot_token: str = field(default_factory=lambda: os.environ["BOT_TOKEN"])
@@ -74,6 +78,7 @@ class Config:
     forget_creators_after_days: int = field(default_factory=lambda: int(os.getenv("FORGET_CREATORS_AFTER_DAYS", "90")))
 
     alert_chat_id: str | None = field(default_factory=lambda: os.getenv("ALERT_CHAT_ID") or None)
+    webhook_urls: tuple[str, ...] = field(default_factory=lambda: _parse_urls(os.getenv("WEBHOOK_URLS", "")))
 
     # Optional per-user Grok OAuth. This is separate from the screening API key.
     xai_oauth_client_id: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_ID", ""))
