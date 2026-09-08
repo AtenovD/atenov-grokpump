@@ -5,6 +5,10 @@
 <h1 align="center">PumpGuard Bot</h1>
 
 <p align="center">
+  <a href="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml"><img src="https://github.com/AtenovD/atenov-grokpump/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+</p>
+
+<p align="center">
   A Telegram bot that screens new pump.fun, Clanker, and hood.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book — then simulates the trade. No live execution, ever.
 </p>
 
