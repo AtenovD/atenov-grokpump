@@ -18,6 +18,7 @@ from bot.services.models import Token, TokenAnalysis
 from bot.services.reputation import ReputationBook
 from bot.services.risk import RiskManager
 from bot.services.storage import Position, Storage
+from bot.services.webhooks import deliver_signal_webhooks
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,7 @@ async def screen_token(
 async def broadcast_signal(
     bot: Bot, session: aiohttp.ClientSession, storage: Storage, analysis: TokenAnalysis
 ) -> None:
+    await deliver_signal_webhooks(session, analysis, config.webhook_urls)
     if not config.alert_chat_id:
         return
     token = analysis.token
