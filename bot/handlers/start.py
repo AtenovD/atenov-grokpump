@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from bot.config import config
 from bot.keyboards import back_to_menu_keyboard, language_keyboard, main_menu_keyboard
 from bot.locales.texts import t
+from bot.services.onboarding import setup_checklist
 from bot.services.storage import Storage
 from bot.services.chains import chain_label
 
@@ -15,6 +16,14 @@ router = Router(name="start")
 
 def _is_admin(user_id: int) -> bool:
     return user_id in config.admin_ids
+
+
+async def _send_setup_checklist_if_admin(message: Message, lang: str, user_id: int) -> None:
+    if not _is_admin(user_id):
+        return
+    checklist = setup_checklist(lang)
+    if checklist:
+        await message.answer(checklist)
 
 
 @router.message(CommandStart())
@@ -30,6 +39,7 @@ async def cmd_start(message: Message, storage: Storage) -> None:
     await message.answer(
         t(user.lang, "main_menu_title"), reply_markup=main_menu_keyboard(user.lang, _is_admin(message.from_user.id))
     )
+    await _send_setup_checklist_if_admin(message, user.lang, message.from_user.id)
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -41,6 +51,7 @@ async def on_lang_chosen(callback: CallbackQuery, storage: Storage) -> None:
     await callback.message.answer(
         t(lang, "main_menu_title"), reply_markup=main_menu_keyboard(lang, _is_admin(callback.from_user.id))
     )
+    await _send_setup_checklist_if_admin(callback.message, lang, callback.from_user.id)
     await callback.answer()
 
 

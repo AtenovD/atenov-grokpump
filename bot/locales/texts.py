@@ -5,7 +5,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "choose_lang": "Привет! Выбери язык:",
         "lang_set": "Язык установлен: Русский 🇷🇺",
         "welcome": (
-            "Я слежу за новыми токенами на pump.fun и прогоняю каждый через 4 AI-агента на Grok "
+            "Я слежу за новыми токенами на Robinhood Chain (hood.fun) и прогоняю каждый через 4 AI-агента на Grok "
             "(аудитор, нарратив, тайминг, финальный проверяющий) плюс risk-менеджер и книгу репутации "
             "криэйторов.\n\n⚠️ Это исследовательский инструмент. Все сделки — <b>dry-run</b> (симуляция), "
             "реальные деньги никогда не используются."
@@ -69,12 +69,26 @@ TEXTS: dict[str, dict[str, str]] = {
             "⚠️ Мемкоины на бондинговой кривой обычно теряют стоимость полностью. Этот бот не размещает "
             "реальные сделки и не является финансовым советом."
         ),
+        "setup_checklist_title": "⚙️ Для полноценной работы бота нужно донастроить:",
+        "setup_item_grok": (
+            "1️⃣ <b>GROK_API_KEY</b> — без него агенты Grok не могут анализировать токены, скрининг всегда "
+            "будет отклонять всё.\nПолучить ключ: {link}\nДобавь его в .env (или переменные окружения на "
+            "хостинге) и перезапусти бота."
+        ),
+        "setup_item_alert_chat": (
+            "2️⃣ <b>ALERT_CHAT_ID</b> — без него сигналы, прошедшие проверку, никуда не публикуются, ты их "
+            "просто не увидишь.\nКак получить:\n"
+            "• создай канал в Telegram и добавь этого бота туда админом\n"
+            "• перешли любое сообщение из канала боту {id_bot} — он покажет chat_id вида -1001234567890\n"
+            "Вставь этот id в ALERT_CHAT_ID и перезапусти бота."
+        ),
+        "setup_checklist_footer": "Это сообщение перестанет приходить, как только переменные будут заполнены.",
     },
     "en": {
         "choose_lang": "Hi! Choose your language:",
         "lang_set": "Language set: English 🇬🇧",
         "welcome": (
-            "I watch new pump.fun token launches and screen each one through 4 Grok-powered agents "
+            "I watch new Robinhood Chain (hood.fun) token launches and screen each one through 4 Grok-powered agents "
             "(auditor, narrative, timing, final adversarial checker), plus a risk manager and a creator "
             "reputation book.\n\n⚠️ This is a research tool. All trades are <b>dry-run</b> (simulated) — "
             "real money is never used."
@@ -138,6 +152,20 @@ TEXTS: dict[str, dict[str, str]] = {
             "⚠️ Bonding-curve memecoins usually lose their value entirely. This bot never places real "
             "trades and is not financial advice."
         ),
+        "setup_checklist_title": "⚙️ To run at full capacity, the bot still needs:",
+        "setup_item_grok": (
+            "1️⃣ <b>GROK_API_KEY</b> - without it the Grok agents can't analyze tokens, screening will "
+            "reject everything.\nGet a key here: {link}\nAdd it to .env (or your hosting provider's "
+            "environment variables) and restart the bot."
+        ),
+        "setup_item_alert_chat": (
+            "2️⃣ <b>ALERT_CHAT_ID</b> - without it, signals that pass screening are never published "
+            "anywhere, you simply won't see them.\nHow to get it:\n"
+            "• create a Telegram channel and add this bot there as an admin\n"
+            "• forward any message from that channel to {id_bot} - it will show a chat_id like -1001234567890\n"
+            "Paste that id into ALERT_CHAT_ID and restart the bot."
+        ),
+        "setup_checklist_footer": "This message will stop appearing once those variables are set.",
     },
 }
 
