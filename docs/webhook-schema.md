@@ -15,10 +15,10 @@ Consumers must branch on `schema_version`. Version 1 has this exact envelope:
       "symbol": "PUMP",
       "name": "Example token",
       "creator": "creator address",
-      "sol_in_curve": 18.4,
+      "native_in_curve": 18.4,
       "unique_buyers": 21,
       "created_at": 1788868700.0,
-      "chain": "solana",
+      "chain": "robinhood",
       "reference_price": 0.0000123
     },
     "researcher": {

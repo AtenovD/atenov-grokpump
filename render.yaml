@@ -14,7 +14,7 @@ services:
       - key: DB_PATH
         value: /var/data/pumpguard.db
       - key: ENABLED_CHAINS
-        value: solana
+        value: robinhood
     disk:
       name: pumpguard-data
       mountPath: /var/data

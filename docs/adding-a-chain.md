@@ -1,6 +1,6 @@
 # Adding a launchpad or chain adapter
 
-PumpGuard isolates every market-data integration behind `ChainAdapter` in `bot/services/chains/__init__.py`. A fourth integration should only need an adapter module, configuration fields, one factory entry, a token URL/label, and focused tests. The screening, reputation, risk, dry-run execution, position watcher, backtest, and dashboard already scope identity by `(chain, mint)`.
+This bot focuses exclusively on the Robinhood Chain / hood.fun ecosystem today, via the one shipped `robinhood.py` adapter. The integration surface is still isolated behind `ChainAdapter` in `bot/services/chains/__init__.py` in case a second Robinhood-ecosystem source (for example an NFT marketplace on the same chain) is ever worth adding as its own adapter. A new integration should only need an adapter module, configuration fields, one factory entry, a token URL/label, and focused tests. The screening, reputation, risk, dry-run execution, position watcher, backtest, and dashboard already scope identity by `(chain, mint)`.
 
 This guide uses `example` as the new stable chain ID. Replace it with a short lowercase identifier that will not need to change later: it is persisted in SQLite and appears in webhooks and metrics.
 
@@ -35,23 +35,21 @@ Both paths are started by `bot/main.py`. They must reconnect forever after expec
 | `mint` | Canonical token contract/address. Normalize case consistently for case-insensitive chains. |
 | `symbol`, `name` | Untrusted display strings, or `None`. Do not interpret them as commands. |
 | `creator` | Creator/deployer address if authoritative, otherwise `None`. |
-| `sol_in_curve` | Legacy field name for observed native liquidity/curve funding. Preserve native-unit consistency within the adapter. |
+| `native_in_curve` | Observed native liquidity/curve funding, in the chain's native unit (ETH on Robinhood Chain). |
 | `unique_buyers` | Authoritative unique buyer count, or `None` when the source does not provide it. Never invent a count. |
 | `created_at` | UTC Unix timestamp in seconds. Parse source timestamps explicitly. |
 | `chain` | Exactly the adapter's stable `chain_id`. |
 | `reference_price` | Real, positive entry price in the adapter's pricing unit, when available. |
 
-For a non-Solana adapter, provide `reference_price`. `DryRunExecutor` retains a legacy pump.fun fallback based on `sol_in_curve` and `unique_buyers`; that fallback is not a meaningful EVM or arbitrary-chain price. Do not yield a launch until the source exposes a positive curve or pool price.
+Always provide `reference_price` when the source exposes one. `DryRunExecutor`'s fallback based on `native_in_curve` and `unique_buyers` is only meaningful when a source genuinely has no reliable price yet. Do not yield a launch until the source exposes a positive curve or pool price.
 
 Use authoritative launchpad/indexer fields and document their units. Avoid float arithmetic on raw integer reserve values until after parsing both values. Reject zero/negative reserves and malformed addresses rather than manufacturing a price.
 
 ## 3. Choose the closest existing example
 
-- `solana.py` is the WebSocket pattern. It has one subscription for launch discovery and another dynamic subscription for watched-token trades. `_want_resubscribe` rebuilds the trade subscription when the watched set changes. Its pre-graduation price is derived from reported virtual reserves.
-- `base.py` is a REST polling pattern. It establishes a baseline on its first response so a restart does not emit the entire current catalogue as new. It reads Clanker's pool-derived USD price and normalizes EVM addresses to lowercase.
-- `robinhood.py` is a hybrid curve/pool pricing example. Before graduation it derives price from `virtualEth / virtualTokens`; after migration it prefers the indexed Uniswap-pair price. It also establishes a first-poll baseline.
+- `robinhood.py` is the reference REST polling pattern. It establishes a baseline on its first response so a restart does not emit the entire current catalogue as new. Before graduation it derives price from `virtualEth / virtualTokens`; after migration it prefers the indexed Uniswap-pair price (`pairPriceWei`).
 
-Copy structure, not source-specific field names. Confirm the new launchpad's API contract and rate limits from primary documentation before implementation.
+Copy structure, not source-specific field names. Confirm the new source's API contract and rate limits from primary documentation before implementation.
 
 ## 4. Implement the adapter
 
@@ -128,7 +126,7 @@ class ExampleAdapter:
                                 symbol=item.get("symbol"),
                                 name=item.get("name"),
                                 creator=item.get("creator"),
-                                sol_in_curve=float(item.get("nativeLiquidity") or 0),
+                                native_in_curve=float(item.get("nativeLiquidity") or 0),
                                 unique_buyers=item.get("uniqueBuyers"),
                                 created_at=float(item.get("createdAt") or time.time()),
                                 chain=self.chain_id,
@@ -187,7 +185,7 @@ Then update `bot/services/chains/__init__.py`:
 Add `EXAMPLE_DATA_URL` and `EXAMPLE_RPC_URL` to `.env.example` and the README configuration table. Operators enable it with:
 
 ```dotenv
-ENABLED_CHAINS=solana,example
+ENABLED_CHAINS=robinhood,example
 ```
 
 Unknown names intentionally fail fast in `build_adapters()` rather than silently leaving a requested chain unmonitored.

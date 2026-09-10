@@ -14,7 +14,7 @@ def _parse_ids(raw: str) -> set[int]:
 
 def _parse_chains(raw: str) -> tuple[str, ...]:
     chains = tuple(dict.fromkeys(part.strip().lower() for part in raw.split(",") if part.strip()))
-    return chains or ("solana",)
+    return chains or ("robinhood",)
 
 
 def _parse_urls(raw: str) -> tuple[str, ...]:
@@ -44,15 +44,9 @@ class Config:
         default_factory=lambda: float(os.getenv("GROK_BREAKER_COOLDOWN_SECONDS", "60"))
     )
 
-    # New-launch data feed (PumpPortal's public pump.fun WebSocket feed).
-    data_ws_url: str = field(default_factory=lambda: os.getenv("DATA_WS_URL", "wss://pumpportal.fun/api/data"))
     enabled_chains: tuple[str, ...] = field(
-        default_factory=lambda: _parse_chains(os.getenv("ENABLED_CHAINS", "solana"))
+        default_factory=lambda: _parse_chains(os.getenv("ENABLED_CHAINS", "robinhood"))
     )
-    base_data_url: str = field(
-        default_factory=lambda: os.getenv("BASE_DATA_URL", "https://www.clanker.world/api/tokens")
-    )
-    base_rpc_url: str = field(default_factory=lambda: os.getenv("BASE_RPC_URL", "https://mainnet.base.org"))
     robinhood_data_url: str = field(
         default_factory=lambda: os.getenv("ROBINHOOD_DATA_URL", "https://hood.fun")
     )

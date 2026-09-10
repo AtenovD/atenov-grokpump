@@ -57,14 +57,14 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
             await writer.record_price_snapshot("mint", 1.25)
             await writer.log_signal("mint", "TKN", 0.8, "executor", "bought")
             await writer.set_runtime_health("circuit_breaker", "open", 1.0)
-            await writer.set_runtime_health("price_feed:solana", "healthy", 1.0)
+            await writer.set_runtime_health("price_feed:robinhood", "healthy", 1.0)
             await writer.close()
 
             reader = Storage(path)
             await reader.connect_readonly()
             positions = await read_open_positions(reader)
             self.assertEqual(len(positions), 1)
-            self.assertEqual(positions[0]["chain"], "solana")
+            self.assertEqual(positions[0]["chain"], "robinhood")
             self.assertEqual(positions[0]["current_price"], 1.25)
             self.assertEqual((await read_stats(reader))["bought_24h"], 1)
             from dashboard.metrics import render_metrics
@@ -72,7 +72,7 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn(b'pumpguard_signals_screened_total{stage="executor"} 1.0', metrics)
             self.assertIn(b'pumpguard_signals_bought_total{stage="executor"} 1.0', metrics)
             self.assertIn(b'pumpguard_circuit_breaker_state{state="open"} 1.0', metrics)
-            self.assertIn(b'pumpguard_price_feed_healthy{chain="solana"} 1.0', metrics)
+            self.assertIn(b'pumpguard_price_feed_healthy{chain="robinhood"} 1.0', metrics)
             await reader.close()
         finally:
             os.unlink(path)

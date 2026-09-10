@@ -144,7 +144,7 @@ async def read_open_positions(storage: Storage) -> list[dict[str, object]]:
     columns = await _columns(storage, "positions")
     if not columns:
         return []
-    chain_expr = "p.chain" if "chain" in columns else "'solana'"
+    chain_expr = "p.chain" if "chain" in columns else "'robinhood'"
     try:
         cursor = await storage.db.execute(
             f"SELECT p.mint, {chain_expr}, p.symbol, p.entry_price, p.sol_spent, p.score, "

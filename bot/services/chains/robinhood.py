@@ -79,7 +79,7 @@ class RobinhoodAdapter:
                         self._emitted.add(key)
                         yield Token(
                             mint=mint, symbol=item.get("symbol"), name=item.get("name"),
-                            creator=item.get("creator"), sol_in_curve=float((item.get("curve") or {}).get("realEth") or 0) / 10**18,
+                            creator=item.get("creator"), native_in_curve=float((item.get("curve") or {}).get("realEth") or 0) / 10**18,
                             unique_buyers=None,
                             created_at=float(item.get("timestamp") or 0), chain=self.chain_id,
                             reference_price=price,

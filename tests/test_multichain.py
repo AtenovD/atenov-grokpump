@@ -21,7 +21,12 @@ from bot.services.risk import RiskManager
 from bot.services.storage import Position, Storage
 
 
-class MultiChainStorageTests(unittest.IsolatedAsyncioTestCase):
+class ChainScopingStorageTests(unittest.IsolatedAsyncioTestCase):
+    """The storage layer scopes every lookup by chain, even though Robinhood
+    is the only chain this project ships an adapter for today. These tests use
+    a second, made-up chain id purely to prove that scoping actually isolates
+    rows, not to imply any other chain is supported."""
+
     async def asyncSetUp(self) -> None:
         self.storage = Storage(":memory:")
         await self.storage.connect()
@@ -31,28 +36,28 @@ class MultiChainStorageTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_same_creator_is_scoped_per_chain(self) -> None:
         address = "same-address"
-        await self.storage.record_creator_outcome(address, True, "solana")
+        await self.storage.record_creator_outcome(address, True, "robinhood")
         reputation = ReputationBook(self.storage)
 
-        self.assertIsNotNone(await reputation.is_blocked(address, "solana"))
-        self.assertIsNone(await reputation.is_blocked(address, "base"))
+        self.assertIsNotNone(await reputation.is_blocked(address, "robinhood"))
+        self.assertIsNone(await reputation.is_blocked(address, "other-chain"))
 
     async def test_dedup_copycats_and_positions_are_scoped_per_chain(self) -> None:
         address = "same-address"
-        await self.storage.mark_seen("same-mint", "SAME", "Same", "solana")
-        self.assertTrue(await self.storage.is_seen("same-mint", "solana"))
-        self.assertFalse(await self.storage.is_seen("same-mint", "base"))
-        await self.storage.mark_seen("same-mint", "SAME", "Same", "base")
+        await self.storage.mark_seen("same-mint", "SAME", "Same", "robinhood")
+        self.assertTrue(await self.storage.is_seen("same-mint", "robinhood"))
+        self.assertFalse(await self.storage.is_seen("same-mint", "other-chain"))
+        await self.storage.mark_seen("same-mint", "SAME", "Same", "other-chain")
 
-        base_token = Token("new", "SAME", "Same", "creator", 1, 5, time.time(), "base")
-        solana_token = Token("new", "SAME", "Same", "creator", 1, 5, time.time(), "solana")
-        self.assertIn("possible_copycat", (await run_researcher(self.storage, base_token)).flags)
-        self.assertIn("possible_copycat", (await run_researcher(self.storage, solana_token)).flags)
+        other_token = Token("new", "SAME", "Same", "creator", 1, 5, time.time(), "other-chain")
+        robinhood_token = Token("new", "SAME", "Same", "creator", 1, 5, time.time(), "robinhood")
+        self.assertIn("possible_copycat", (await run_researcher(self.storage, other_token)).flags)
+        self.assertIn("possible_copycat", (await run_researcher(self.storage, robinhood_token)).flags)
 
-        base_position = Position("same-mint", "BASE", 1, 0.1, 0.8, address, 1, "open", "base")
-        sol_position = Position("same-mint", "SOL", 1, 0.1, 0.8, address, 1, "open", "solana")
-        await self.storage.open_position(base_position)
-        await self.storage.open_position(sol_position)
+        other_position = Position("same-mint", "OTHER", 1, 0.1, 0.8, address, 1, "open", "other-chain")
+        robinhood_position = Position("same-mint", "ROBIN", 1, 0.1, 0.8, address, 1, "open", "robinhood")
+        await self.storage.open_position(other_position)
+        await self.storage.open_position(robinhood_position)
         self.assertEqual(len(await self.storage.open_positions()), 2)
 
     async def test_robinhood_virtual_reserve_price(self) -> None:
@@ -63,8 +68,8 @@ class MultiChainStorageTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_persists_chain(self) -> None:
         token = Token(
-            "0xbase", "BASE", "Base Token", "creator", 1, 5,
-            time.time() - 120, "base", 0.001,
+            "0xrobin", "ROBIN", "Robinhood Token", "creator", 1, 5,
+            time.time() - 120, "robinhood", 0.001,
         )
         passed = AgentVerdict("mock", 0.9, "ok", approve=True)
         with patch(
@@ -82,16 +87,19 @@ class MultiChainStorageTests(unittest.IsolatedAsyncioTestCase):
                     ReputationBook(self.storage), DryRunExecutor(), token, {},
                 )
         self.assertIsNotNone(result)
-        self.assertEqual((await self.storage.open_positions())[0].chain, "base")
+        self.assertEqual((await self.storage.open_positions())[0].chain, "robinhood")
         cursor = await self.storage.db.execute(
             "SELECT chain FROM signals WHERE mint = ?", (token.mint,)
         )
-        self.assertEqual((await cursor.fetchone())[0], "base")
-        self.assertIn("base: 1", (await self.storage.stats())["chains_24h"])
+        self.assertEqual((await cursor.fetchone())[0], "robinhood")
+        self.assertIn("robinhood: 1", (await self.storage.stats())["chains_24h"])
 
 
 class MigrationTests(unittest.IsolatedAsyncioTestCase):
     async def test_old_database_rows_migrate_to_solana(self) -> None:
+        """Databases created before the multi-chain migration predate Robinhood
+        support entirely — their rows were genuinely Solana data, so the
+        migration correctly labels them 'solana' rather than rewriting history."""
         handle = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         path = handle.name
         handle.close()

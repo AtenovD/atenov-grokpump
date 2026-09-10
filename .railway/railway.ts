@@ -24,7 +24,7 @@ export default defineRailway(() => {
       ADMIN_IDS: preserve(),
       GROK_API_KEY: preserve(),
       DB_PATH: "/data/pumpguard.db",
-      ENABLED_CHAINS: "solana",
+      ENABLED_CHAINS: "robinhood",
     },
   });
 

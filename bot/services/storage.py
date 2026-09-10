@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS required_channels (
 );
 
 CREATE TABLE IF NOT EXISTS seen_tokens (
-    chain TEXT NOT NULL DEFAULT 'solana',
+    chain TEXT NOT NULL DEFAULT 'robinhood',
     mint TEXT NOT NULL,
     symbol TEXT,
     name TEXT,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS seen_tokens (
 );
 
 CREATE TABLE IF NOT EXISTS creators (
-    chain TEXT NOT NULL DEFAULT 'solana',
+    chain TEXT NOT NULL DEFAULT 'robinhood',
     creator TEXT NOT NULL,
     rugs INTEGER NOT NULL DEFAULT 0,
     wins INTEGER NOT NULL DEFAULT 0,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS daily_counters (
 );
 
 CREATE TABLE IF NOT EXISTS positions (
-    chain TEXT NOT NULL DEFAULT 'solana',
+    chain TEXT NOT NULL DEFAULT 'robinhood',
     mint TEXT NOT NULL,
     symbol TEXT,
     entry_price REAL NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS positions (
 
 CREATE TABLE IF NOT EXISTS signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    chain TEXT NOT NULL DEFAULT 'solana',
+    chain TEXT NOT NULL DEFAULT 'robinhood',
     mint TEXT NOT NULL,
     symbol TEXT,
     score REAL,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS signals (
 );
 
 CREATE TABLE IF NOT EXISTS price_snapshots (
-    chain TEXT NOT NULL DEFAULT 'solana',
+    chain TEXT NOT NULL DEFAULT 'robinhood',
     mint TEXT NOT NULL,
     price REAL NOT NULL,
     observed_at INTEGER NOT NULL,
@@ -133,7 +133,7 @@ class Position:
     creator: str | None
     opened_at: int
     status: str
-    chain: str = "solana"
+    chain: str = "robinhood"
     exit_price: float | None = None
     closed_at: int | None = None
     close_reason: str | None = None
@@ -185,7 +185,7 @@ class Storage:
                 """
                 ALTER TABLE seen_tokens RENAME TO seen_tokens_legacy;
                 CREATE TABLE seen_tokens (
-                    chain TEXT NOT NULL DEFAULT 'solana', mint TEXT NOT NULL, symbol TEXT,
+                    chain TEXT NOT NULL DEFAULT 'robinhood', mint TEXT NOT NULL, symbol TEXT,
                     name TEXT, first_seen_at INTEGER NOT NULL, PRIMARY KEY (chain, mint)
                 );
                 INSERT INTO seen_tokens (chain, mint, symbol, name, first_seen_at)
@@ -198,7 +198,7 @@ class Storage:
                 """
                 ALTER TABLE creators RENAME TO creators_legacy;
                 CREATE TABLE creators (
-                    chain TEXT NOT NULL DEFAULT 'solana', creator TEXT NOT NULL,
+                    chain TEXT NOT NULL DEFAULT 'robinhood', creator TEXT NOT NULL,
                     rugs INTEGER NOT NULL DEFAULT 0, wins INTEGER NOT NULL DEFAULT 0,
                     last_seen_at INTEGER NOT NULL, PRIMARY KEY (chain, creator)
                 );
@@ -212,7 +212,7 @@ class Storage:
                 """
                 ALTER TABLE positions RENAME TO positions_legacy;
                 CREATE TABLE positions (
-                    chain TEXT NOT NULL DEFAULT 'solana', mint TEXT NOT NULL, symbol TEXT,
+                    chain TEXT NOT NULL DEFAULT 'robinhood', mint TEXT NOT NULL, symbol TEXT,
                     entry_price REAL NOT NULL, sol_spent REAL NOT NULL, score REAL NOT NULL,
                     creator TEXT, opened_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'open',
                     exit_price REAL, closed_at INTEGER, close_reason TEXT,
@@ -357,14 +357,14 @@ class Storage:
 
     # --- seen tokens (monitor dedup) --------------------------------------
 
-    async def is_seen(self, mint: str, chain: str = "solana") -> bool:
+    async def is_seen(self, mint: str, chain: str = "robinhood") -> bool:
         cursor = await self.db.execute(
             "SELECT 1 FROM seen_tokens WHERE chain = ? AND mint = ?", (chain, mint)
         )
         return await cursor.fetchone() is not None
 
     async def mark_seen(
-        self, mint: str, symbol: str | None = None, name: str | None = None, chain: str = "solana"
+        self, mint: str, symbol: str | None = None, name: str | None = None, chain: str = "robinhood"
     ) -> None:
         await self.db.execute(
             "INSERT OR IGNORE INTO seen_tokens (chain, mint, symbol, name, first_seen_at) VALUES (?, ?, ?, ?, ?)",
@@ -374,7 +374,7 @@ class Storage:
 
     async def find_similar_recent(
         self, symbol: str | None, name: str | None, since_seconds: int,
-        exclude_mint: str, chain: str = "solana",
+        exclude_mint: str, chain: str = "robinhood",
     ) -> list[str]:
         """Normalized exact-match lookup for a copycat launch reusing a recent name/symbol.
 
@@ -401,7 +401,7 @@ class Storage:
         return matches
 
     async def recent_token_names(
-        self, since_seconds: int, exclude_mint: str, chain: str = "solana"
+        self, since_seconds: int, exclude_mint: str, chain: str = "robinhood"
     ) -> list[tuple[str, str | None, str | None]]:
         cutoff = int(time.time()) - since_seconds
         cursor = await self.db.execute(
@@ -413,14 +413,14 @@ class Storage:
 
     # --- reputation book ---------------------------------------------------
 
-    async def creator_rugs(self, creator: str, chain: str = "solana") -> int:
+    async def creator_rugs(self, creator: str, chain: str = "robinhood") -> int:
         cursor = await self.db.execute(
             "SELECT rugs FROM creators WHERE chain = ? AND creator = ?", (chain, creator)
         )
         row = await cursor.fetchone()
         return row[0] if row else 0
 
-    async def creator_stats(self, creator: str, chain: str = "solana") -> tuple[int, int]:
+    async def creator_stats(self, creator: str, chain: str = "robinhood") -> tuple[int, int]:
         """Returns (rugs, wins) for a creator, (0, 0) if never seen before."""
         cursor = await self.db.execute(
             "SELECT rugs, wins FROM creators WHERE chain = ? AND creator = ?", (chain, creator)
@@ -429,7 +429,7 @@ class Storage:
         return (row[0], row[1]) if row else (0, 0)
 
     async def record_creator_outcome(
-        self, creator: str, is_rug: bool, chain: str = "solana"
+        self, creator: str, is_rug: bool, chain: str = "robinhood"
     ) -> None:
         now = int(time.time())
         cursor = await self.db.execute(
@@ -501,7 +501,7 @@ class Storage:
         exit_price: float | None = None,
         close_reason: str | None = None,
         closed_at: int | None = None,
-        chain: str = "solana",
+        chain: str = "robinhood",
     ) -> None:
         await self.db.execute(
             "UPDATE positions SET status = 'closed', exit_price = ?, closed_at = ?, close_reason = ? "
@@ -539,7 +539,7 @@ class Storage:
         return count
 
     async def record_price_snapshot(
-        self, mint: str, price: float, chain: str = "solana"
+        self, mint: str, price: float, chain: str = "robinhood"
     ) -> None:
         await self.db.execute(
             "INSERT INTO price_snapshots (chain, mint, price, observed_at) VALUES (?, ?, ?, ?) "
@@ -562,7 +562,7 @@ class Storage:
 
     async def log_signal(
         self, mint: str, symbol: str | None, score: float | None, stage: str,
-        outcome: str, detail: str = "", chain: str = "solana",
+        outcome: str, detail: str = "", chain: str = "robinhood",
     ) -> None:
         await self.db.execute(
             "INSERT INTO signals (chain, mint, symbol, score, stage, outcome, detail, created_at) "

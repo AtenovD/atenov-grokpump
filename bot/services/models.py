@@ -9,10 +9,10 @@ class Token:
     symbol: str | None
     name: str | None
     creator: str | None
-    sol_in_curve: float
+    native_in_curve: float
     unique_buyers: int | None
     created_at: float
-    chain: str = "solana"
+    chain: str = "robinhood"
     reference_price: float | None = None
 
 

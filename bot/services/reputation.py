@@ -10,7 +10,7 @@ class ReputationBook:
     def __init__(self, storage: Storage) -> None:
         self.storage = storage
 
-    async def is_blocked(self, creator: str | None, chain: str = "solana") -> str | None:
+    async def is_blocked(self, creator: str | None, chain: str = "robinhood") -> str | None:
         if not creator:
             return None
         rugs = await self.storage.creator_rugs(creator, chain)
@@ -19,7 +19,7 @@ class ReputationBook:
         return None
 
     async def record_outcome(
-        self, creator: str | None, pnl_pct: float, chain: str = "solana"
+        self, creator: str | None, pnl_pct: float, chain: str = "robinhood"
     ) -> None:
         if not creator:
             return

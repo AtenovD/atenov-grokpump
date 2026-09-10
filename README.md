@@ -16,12 +16,12 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12">
   <img src="https://img.shields.io/badge/Powered%20by-Grok-FF6B00?style=for-the-badge" alt="Powered by Grok">
-  <img src="https://img.shields.io/badge/chains-Solana%20%7C%20Base%20%7C%20Robinhood-9945FF?style=for-the-badge" alt="Multi-chain">
+  <img src="https://img.shields.io/badge/chain-Robinhood%20Chain-00C805?style=for-the-badge" alt="Robinhood Chain">
   <img src="https://img.shields.io/badge/execution-dry--run%20only-brightgreen?style=for-the-badge" alt="Dry-run only">
 </p>
 
 <p align="center">
-  A Telegram bot that screens new pump.fun, Clanker, and hood.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book - then simulates the trade. No live execution, ever.
+  A Telegram bot that screens new Robinhood Chain / hood.fun token launches through four Grok-powered agents, a risk manager, and a creator reputation book - then simulates the trade. No live execution, ever.
 </p>
 
 <table align="center">
@@ -69,7 +69,7 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
   <img src="assets/pipeline-diagram.png" alt="Screening pipeline: filter, analyze, evaluate, execute" width="100%">
 </p>
 
-- **Multi-chain launch monitor** - watches Solana/pump.fun, Base/Clanker, and Robinhood Chain/hood.fun through per-chain adapters, filters by age and buyer count before spending a single Grok call
+- **Robinhood Chain launch monitor** - watches hood.fun launches on Robinhood Chain, filters by age and buyer count before spending a single Grok call
 - **Five agents**, cheapest first:
   - **Researcher** - free DB lookups before any Grok call: has this creator rugged before, and does this name/symbol exactly or semantically copy a recent token
   - **Auditor** (Grok) - looks for wash trading / bundled buys in the trade and holder data
@@ -138,7 +138,7 @@ docker compose up -d --build
 
 ## Deploy on Railway or Render
 
-The deploy buttons above prompt for the three required values: `BOT_TOKEN`, `ADMIN_IDS`, and `GROK_API_KEY`. Both platform definitions mount a persistent volume and set `DB_PATH` to that volume so SQLite data survives deploys. Add any optional variables from `.env.example` after provisioning. Enable additional chains only after setting their corresponding endpoints.
+The deploy buttons above prompt for the three required values: `BOT_TOKEN`, `ADMIN_IDS`, and `GROK_API_KEY`. Both platform definitions mount a persistent volume and set `DB_PATH` to that volume so SQLite data survives deploys. Add any optional variables from `.env.example` after provisioning.
 
 Railway's current project-level Infrastructure as Code definition is `.railway/railway.ts`. To review and apply it manually, install the Railway CLI and run `npm install`, `railway link`, `railway config plan`, then `railway config apply`. Render reads `render.yaml` automatically when the repository is opened as a Blueprint.
 
@@ -150,9 +150,7 @@ Railway's current project-level Infrastructure as Code definition is `.railway/r
 | `ADMIN_IDS` | comma-separated admin user IDs |
 | `GROK_API_KEY` | xAI API key - used only for the four screening agents |
 | `GROK_FAST_MODEL` / `GROK_CHECKER_MODEL` | models for the three cheap agents vs. the adversarial checker |
-| `DATA_WS_URL` | pump.fun launch feed (defaults to PumpPortal's public endpoint) |
-| `ENABLED_CHAINS` | comma-separated adapter list: `solana`, `base`, `robinhood` (defaults to `solana`) |
-| `BASE_DATA_URL` / `BASE_RPC_URL` | Clanker public API and Base RPC used for source verification/fallback |
+| `ENABLED_CHAINS` | comma-separated adapter list, only `robinhood` is currently implemented (defaults to `robinhood`) |
 | `ROBINHOOD_DATA_URL` / `ROBINHOOD_RPC_URL` | hood.fun public indexer root and Robinhood Chain RPC used for source verification/fallback |
 | `MIN_LAUNCH_AGE_SECONDS` / `MIN_UNIQUE_BUYERS` | pre-filter before any Grok call is made |
 | `COPYCAT_SIMILARITY_THRESHOLD` | cosine threshold for optional semantic copycat matching (default `0.85`) |
@@ -191,23 +189,15 @@ Routes:
 
 **Do not expose analytics routes publicly without authentication in front of them.** If OAuth is enabled, the callback must remain publicly reachable over HTTPS. Configure a reverse proxy that allows `/oauth/callback` while protecting the analytics routes.
 
-## Chain data sources and pricing
+## Robinhood Chain data source and pricing
 
 Contributor documentation: [add a new chain or launchpad adapter](docs/adding-a-chain.md).
 
-<p align="center">
-  <img src="assets/multi-chain.png" alt="One agent, multiple chains: Solana, Base, Robinhood" width="55%">
-</p>
+**Robinhood Chain / hood.fun** polls hood.fun's own read-only `/api/board` indexer every five seconds. Before graduation it calculates the native ETH price from the documented constant-product virtual reserves, `virtualEth / virtualTokens`. After migration it uses `pairPriceWei`, which is sourced from the official Uniswap v3 pool. Robinhood Chain is Arbitrum Orbit chain `4663`. Its public RPC is rate-limited, so production operators should set a dedicated `ROBINHOOD_RPC_URL`, which is intentionally read-only configuration: it provides a stable verification/fallback endpoint without adding wallets, signing, or any live execution path.
 
-- **Solana / pump.fun** uses PumpPortal's public WebSocket for launches and per-mint trades. Pre-graduation price is `virtual SOL reserves / virtual token reserves`, preserving the existing behavior.
-- **Base / Clanker** polls Clanker's [official public token API](https://clanker.gitbook.io/clanker-documentation/api-reference/public/tokens) with `chainId=8453` and `includeMarket=true`. Clanker launches directly into Uniswap pools (v4 for current launches, with legacy v3 pools). The adapter uses the indexer's pool-derived `priceUsd`. Tokens are held until that price is non-zero, so the executor never invents an EVM entry price.
-- **Robinhood Chain / hood.fun** polls hood.fun's own read-only `/api/board` indexer. Before graduation it calculates the native ETH price from the documented constant-product virtual reserves, `virtualEth / virtualTokens`. After migration it uses `pairPriceWei`, which is sourced from the official Uniswap v3 pool. Robinhood Chain is Arbitrum Orbit chain `4663`. Its public RPC is rate-limited, so production operators should set a dedicated `ROBINHOOD_RPC_URL`.
+hood.fun's indexer does not expose an authoritative unique-buyer count in its launch records, so that one pre-filter is skipped when the adapter reports the value as unavailable. All remaining researcher, agent, checker, risk, and dry-run stages are unchanged.
 
-The REST polling interval is five seconds. `BASE_RPC_URL` and `ROBINHOOD_RPC_URL` are intentionally read-only configuration: they provide a stable verification/fallback endpoint without adding wallets, signing, or any live execution path.
-
-The two EVM indexers do not expose an authoritative unique-buyer count in their launch records, so that one pre-filter is skipped when the adapter reports the value as unavailable. All remaining researcher, agent, checker, risk, and dry-run stages are unchanged. Solana continues to enforce `MIN_UNIQUE_BUYERS` from PumpPortal data.
-
-Semantic copycat detection is local and optional. When `requirements-semantic.txt` is installed, `sentence-transformers/all-MiniLM-L6-v2` is loaded lazily on the first researcher run and compared only with tokens from the same chain and six-hour lookback. If the package or model is unavailable, the bot logs one warning and continues with the existing normalized exact matcher.
+Semantic copycat detection is local and optional. When `requirements-semantic.txt` is installed, `sentence-transformers/all-MiniLM-L6-v2` is loaded lazily on the first researcher run and compared only with tokens from the same six-hour lookback. If the package or model is unavailable, the bot logs one warning and continues with the existing normalized exact matcher.
 
 ## Admin panel
 
