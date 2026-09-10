@@ -8,7 +8,7 @@ from bot.services.webhooks import deliver_signal_webhooks, signal_payload
 
 
 def analysis() -> TokenAnalysis:
-    token = Token("mint", "TST", "Test", "creator", 2.0, 9, 100.0, chain="base")
+    token = Token("mint", "TST", "Test", "creator", 2.0, 9, 100.0, chain="robinhood")
     verdict = AgentVerdict("auditor", 0.8, "ok")
     return TokenAnalysis(
         token, verdict, verdict, verdict, verdict, verdict, 0.8,
@@ -45,7 +45,7 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["event"], "signal.passed")
         self.assertEqual(payload["emitted_at"], 123)
-        self.assertEqual(payload["analysis"]["token"]["chain"], "base")
+        self.assertEqual(payload["analysis"]["token"]["chain"], "robinhood")
         self.assertEqual(payload["analysis"]["risk"]["size_sol"], 0.2)
 
     async def test_failed_delivery_is_retried_once(self) -> None:

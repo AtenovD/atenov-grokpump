@@ -18,6 +18,7 @@
   <img src="https://img.shields.io/badge/Powered%20by-Grok-FF6B00?style=for-the-badge" alt="Powered by Grok">
   <img src="https://img.shields.io/badge/chain-Robinhood%20Chain-00C805?style=for-the-badge" alt="Robinhood Chain">
   <img src="https://img.shields.io/badge/execution-dry--run%20only-brightgreen?style=for-the-badge" alt="Dry-run only">
+  <img src="https://img.shields.io/badge/NFT-screener-EC4899?style=for-the-badge" alt="NFT screener">
 </p>
 
 <p align="center">
@@ -48,6 +49,10 @@
     <td align="center"><a href="docs/webhook-schema.md"><img src="https://img.shields.io/badge/WEBHOOKS-v1%20schema-D9364A?style=for-the-badge" alt="webhook schema docs"></a></td>
     <td align="center"><img src="https://img.shields.io/badge/add%20a%20chain-000000?style=for-the-badge" alt="add a chain"></td>
     <td align="center"><a href="docs/adding-a-chain.md"><img src="https://img.shields.io/badge/CONTRIBUTOR%20DOCS-adapters-6B7280?style=for-the-badge" alt="adding a chain adapter"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/new-000000?style=for-the-badge" alt="new"></td>
+    <td align="center"><a href="#nft-screener-robinhood-chain"><img src="https://img.shields.io/badge/NFT%20SCREENER-floor--sweep%20%2B%20cross--signal-EC4899?style=for-the-badge" alt="NFT screener"></a></td>
   </tr>
 </table>
 
@@ -91,6 +96,9 @@ This is a **research/screening tool**, not a trading bot. Every "buy" and "sell"
 - **Read-only web dashboard** - responsive funnel, recorded-performance summary, open positions, and a polling JSON stats endpoint without a second market-data connection
 - **Versioned signal webhooks** - optionally POST every passing `TokenAnalysis` to multiple integrations with one retry and a stable v1 JSON envelope
 - **Prometheus metrics** - dashboard `/metrics` exposes cumulative screening outcomes, positions, Grok circuit-breaker state, and per-chain price-feed health
+- **NFT screener** (optional) - a second, independent pipeline screens new Robinhood Chain NFT collections for wash-minting and hype, alert-only
+- **Floor-sweep alerts** - watches every screened collection's floor price and alerts on a sudden collapse (possible rug) or spike (possible breakout)
+- **Cross-surface signal** - flags when the same creator address launches both a token and an NFT collection on Robinhood Chain
 
 ## Stack
 
@@ -162,6 +170,11 @@ Railway's current project-level Infrastructure as Code definition is `.railway/r
 | `WEBHOOK_URLS` | optional comma-separated webhook endpoints for passing signals, see `docs/webhook-schema.md` |
 | `PUBLIC_DIGEST_CHAT_ID` | optional, separate channel for the weekly seven-day performance digest |
 | `DASHBOARD_PORT` | read-only dashboard listen port (defaults to `8000`) |
+| `NFT_SCREENER_ENABLED` | turns on the second, independent NFT collection screening pipeline (default `false`) |
+| `ROBINHOOD_NFT_DATA_URL` | Robinhood Chain NFT marketplace indexer root |
+| `NFT_MIN_LAUNCH_AGE_SECONDS` / `NFT_MIN_UNIQUE_MINTERS` | pre-filter before any Grok call is made for a collection |
+| `NFT_ALERT_CHAT_ID` | optional separate channel for NFT alerts, falls back to `ALERT_CHAT_ID` |
+| `FLOOR_SWEEP_DROP_PCT` / `FLOOR_SWEEP_PUMP_PCT` | percent move from a collection's first-observed floor that triggers a floor-sweep alert |
 | `XAI_OAUTH_CLIENT_ID` / `XAI_OAUTH_CLIENT_SECRET` | credentials for an optional xAI OAuth application |
 | `XAI_OAUTH_REDIRECT_URI` | public dashboard callback URL, ending in `/oauth/callback` |
 | `OAUTH_ENCRYPTION_KEY` | Fernet key used to encrypt OAuth access and refresh tokens at rest |
@@ -198,6 +211,19 @@ Contributor documentation: [add a new chain or launchpad adapter](docs/adding-a-
 hood.fun's indexer does not expose an authoritative unique-buyer count in its launch records, so that one pre-filter is skipped when the adapter reports the value as unavailable. All remaining researcher, agent, checker, risk, and dry-run stages are unchanged.
 
 Semantic copycat detection is local and optional. When `requirements-semantic.txt` is installed, `sentence-transformers/all-MiniLM-L6-v2` is loaded lazily on the first researcher run and compared only with tokens from the same six-hour lookback. If the package or model is unavailable, the bot logs one warning and continues with the existing normalized exact matcher.
+
+## NFT screener (Robinhood Chain)
+
+Set `NFT_SCREENER_ENABLED=true` to run a second, independent screening pipeline alongside the token pipeline, covering new NFT collections on Robinhood Chain. It is architecturally a second source-type behind the same `ChainAdapter`-shaped contract, not a new blockchain - see [add a new chain or launchpad adapter](docs/adding-a-chain.md) for the pattern both follow. hood.fun does not yet document a public NFT marketplace API the way it documents `/api/board` for token launches, so `bot/services/nft/adapter.py` assumes the same request/response shape until a real endpoint is confirmed.
+
+This pipeline is alert-only: an NFT collection has no bonding-curve entry price to dry-run buy/sell against the way a token does, so nothing here is ever fed to `DryRunExecutor`.
+
+- **NFT auditor** (Grok) - flags wash-minting: a collection's supply far exceeding its unique-minter count means a handful of wallets minted most of it themselves
+- **NFT narrative** (Grok) - scores hype potential from the collection's name/symbol (no image analysis is wired up yet - see below)
+- **Floor-sweep watcher** - tracks each screened collection's floor price against the first value this process observed for it, and alerts on a `FLOOR_SWEEP_DROP_PCT` collapse (possible rug) or a `FLOOR_SWEEP_PUMP_PCT` spike (possible breakout) in either direction
+- **Cross-surface signal** - `bot/services/cross_signal.py` checks whether the same creator address already has a launch on the *other* Robinhood surface (a token creator who also deployed an NFT collection, or vice versa) and surfaces it as a flag either pipeline's researcher step can weigh - it says nothing on its own about which way that cuts, a serious builder or a coordinated multi-surface scam both look like this
+
+**Not yet implemented, left as a clearly scoped next step:** real image/art analysis for the narrative agent. `NftCollection` has no image field wired up because this codebase's Grok client only makes text `chat/completions` calls today. Wiring in art hype scoring means passing a collection's artwork to a vision-capable Grok model and is a self-contained addition to `bot/services/nft/agents.py::run_nft_narrative` once prioritized.
 
 ## Admin panel
 

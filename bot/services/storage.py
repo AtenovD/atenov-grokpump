@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS seen_tokens (
     mint TEXT NOT NULL,
     symbol TEXT,
     name TEXT,
+    creator TEXT,
     first_seen_at INTEGER NOT NULL,
     PRIMARY KEY (chain, mint)
 );
@@ -174,6 +175,10 @@ class Storage:
             if name not in columns:
                 await self.db.execute(f"ALTER TABLE positions ADD COLUMN {name} {sql_type}")
 
+        seen_columns = await self._columns("seen_tokens")
+        if seen_columns and "creator" not in seen_columns:
+            await self.db.execute("ALTER TABLE seen_tokens ADD COLUMN creator TEXT")
+
     async def _columns(self, table: str) -> set[str]:
         cursor = await self.db.execute(f"PRAGMA table_info({table})")
         return {row[1] for row in await cursor.fetchall()}
@@ -186,7 +191,7 @@ class Storage:
                 ALTER TABLE seen_tokens RENAME TO seen_tokens_legacy;
                 CREATE TABLE seen_tokens (
                     chain TEXT NOT NULL DEFAULT 'robinhood', mint TEXT NOT NULL, symbol TEXT,
-                    name TEXT, first_seen_at INTEGER NOT NULL, PRIMARY KEY (chain, mint)
+                    name TEXT, creator TEXT, first_seen_at INTEGER NOT NULL, PRIMARY KEY (chain, mint)
                 );
                 INSERT INTO seen_tokens (chain, mint, symbol, name, first_seen_at)
                     SELECT 'solana', mint, symbol, name, first_seen_at FROM seen_tokens_legacy;
@@ -364,13 +369,27 @@ class Storage:
         return await cursor.fetchone() is not None
 
     async def mark_seen(
-        self, mint: str, symbol: str | None = None, name: str | None = None, chain: str = "robinhood"
+        self, mint: str, symbol: str | None = None, name: str | None = None, chain: str = "robinhood",
+        creator: str | None = None,
     ) -> None:
         await self.db.execute(
-            "INSERT OR IGNORE INTO seen_tokens (chain, mint, symbol, name, first_seen_at) VALUES (?, ?, ?, ?, ?)",
-            (chain, mint, symbol, name, int(time.time())),
+            "INSERT OR IGNORE INTO seen_tokens (chain, mint, symbol, name, creator, first_seen_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (chain, mint, symbol, name, creator, int(time.time())),
         )
         await self.db.commit()
+
+    async def creator_chains(self, creator: str) -> set[str]:
+        """Every chain this creator address has a recorded launch under.
+
+        Used for cross-signal detection: the same address launching both a
+        Robinhood token and a Robinhood NFT collection is a notable pattern
+        either way it goes (a serious builder, or a coordinated scam).
+        """
+        cursor = await self.db.execute(
+            "SELECT DISTINCT chain FROM seen_tokens WHERE creator = ?", (creator,)
+        )
+        return {row[0] for row in await cursor.fetchall()}
 
     async def find_similar_recent(
         self, symbol: str | None, name: str | None, since_seconds: int,

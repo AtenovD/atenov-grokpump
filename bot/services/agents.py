@@ -5,6 +5,7 @@ import json
 import aiohttp
 
 from bot.config import config
+from bot.services.cross_signal import cross_surface_note
 from bot.services.grok_client import ask_grok
 from bot.services.models import AgentVerdict, Token
 from bot.services.sanitize import sanitize_token_fields
@@ -119,6 +120,11 @@ async def run_researcher(storage: Storage, token: Token) -> AgentVerdict:
             f"meaning is similar to {len(semantic_only)} recent token(s) "
             f"(top cosine similarity {top_score:.2f})"
         )
+
+    cross_note = await cross_surface_note(storage, token.creator, token.chain)
+    if cross_note:
+        flags.append("cross_surface_creator")
+        notes.append(cross_note)
 
     approve = "creator_has_prior_rugs" not in flags
     score = 0.3 if flags else 0.8

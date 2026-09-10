@@ -77,6 +77,33 @@ class Config:
         default_factory=lambda: os.getenv("PUBLIC_DIGEST_CHAT_ID") or None
     )
 
+    # NFT screener — a second, independent source-type covering Robinhood Chain NFT
+    # collections. Screening-only: there is no bonding-curve entry price for an NFT
+    # collection, so nothing here is ever fed to DryRunExecutor.
+    nft_screener_enabled: bool = field(
+        default_factory=lambda: os.getenv("NFT_SCREENER_ENABLED", "false").strip().lower() == "true"
+    )
+    robinhood_nft_data_url: str = field(
+        default_factory=lambda: os.getenv("ROBINHOOD_NFT_DATA_URL", "https://hood.fun")
+    )
+    nft_min_launch_age_seconds: int = field(
+        default_factory=lambda: int(os.getenv("NFT_MIN_LAUNCH_AGE_SECONDS", "60"))
+    )
+    nft_min_unique_minters: int = field(
+        default_factory=lambda: int(os.getenv("NFT_MIN_UNIQUE_MINTERS", "5"))
+    )
+    nft_alert_chat_id: str | None = field(
+        default_factory=lambda: os.getenv("NFT_ALERT_CHAT_ID") or os.getenv("ALERT_CHAT_ID") or None
+    )
+    # Floor-sweep watcher: alerts on a sudden move away from a collection's
+    # first-observed floor price, in either direction, within one poll window.
+    floor_sweep_drop_pct: float = field(
+        default_factory=lambda: float(os.getenv("FLOOR_SWEEP_DROP_PCT", "40"))
+    )
+    floor_sweep_pump_pct: float = field(
+        default_factory=lambda: float(os.getenv("FLOOR_SWEEP_PUMP_PCT", "100"))
+    )
+
     # Optional per-user Grok OAuth. This is separate from the screening API key.
     xai_oauth_client_id: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_ID", ""))
     xai_oauth_client_secret: str = field(default_factory=lambda: os.getenv("XAI_OAUTH_CLIENT_SECRET", ""))

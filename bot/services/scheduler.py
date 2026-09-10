@@ -66,7 +66,7 @@ async def _run_chain_monitor(
             pulse.record_launch()
             if await storage.is_seen(token.mint, token.chain):
                 continue
-            await storage.mark_seen(token.mint, token.symbol, token.name, token.chain)
+            await storage.mark_seen(token.mint, token.symbol, token.name, token.chain, token.creator)
 
             try:
                 analysis = await pipeline.screen_token(

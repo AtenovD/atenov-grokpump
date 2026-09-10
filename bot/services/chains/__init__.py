@@ -7,6 +7,7 @@ from bot.services.models import Token
 
 CHAIN_LABELS = {
     "robinhood": "🟢 Robinhood",
+    "robinhood-nft": "🟢 Robinhood NFT",
 }
 
 

@@ -43,3 +43,33 @@ class TokenAnalysis:
     checker: AgentVerdict | None = None
     total_score: float = 0.0
     risk: RiskDecision | None = None
+
+
+@dataclass
+class NftCollection:
+    """A newly observed NFT collection on the Robinhood Chain marketplace.
+
+    Deliberately not a `Token`: NFT collections have no bonding-curve entry
+    price to dry-run buy/sell against, so this is screened and alerted on,
+    never fed to `DryRunExecutor`.
+    """
+
+    address: str
+    name: str | None
+    symbol: str | None
+    creator: str | None
+    supply: int | None
+    unique_minters: int | None
+    created_at: float
+    chain: str = "robinhood-nft"
+    floor_price: float | None = None
+
+
+@dataclass
+class NftAnalysis:
+    collection: NftCollection
+    researcher: AgentVerdict | None = None
+    auditor: AgentVerdict | None = None
+    narrative: AgentVerdict | None = None
+    timing: AgentVerdict | None = None
+    total_score: float = 0.0

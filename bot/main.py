@@ -12,6 +12,8 @@ from bot.config import config
 from bot.handlers import admin, oauth, start
 from bot.middlewares.subscription import SubscriptionMiddleware
 from bot.services.chains import build_adapters
+from bot.services.nft.adapter import RobinhoodNftAdapter
+from bot.services.nft.scheduler import run_floor_sweep_watcher, run_nft_monitor_loop
 from bot.services.reputation import ReputationBook
 from bot.services.scheduler import run_monitor_loop, run_position_watcher
 from bot.services.storage import Storage
@@ -43,16 +45,30 @@ async def main() -> None:
     price_feed_tasks = [asyncio.create_task(adapter.run()) for adapter in adapters]
     monitor_task = asyncio.create_task(run_monitor_loop(bot, storage, adapters))
     watcher_task = asyncio.create_task(run_position_watcher(storage, reputation, adapter_map))
-    health_task = asyncio.create_task(run_runtime_health_reporter(storage, adapters))
     digest_task = (
         asyncio.create_task(run_weekly_digest_loop(bot, storage, config.public_digest_chat_id))
         if config.public_digest_chat_id else None
     )
 
+    nft_tasks: list[asyncio.Task] = []
+    health_adapters = list(adapters)
+    if config.nft_screener_enabled:
+        nft_adapter = RobinhoodNftAdapter(config.robinhood_nft_data_url)
+        health_adapters.append(nft_adapter)
+        nft_tasks = [
+            asyncio.create_task(nft_adapter.run()),
+            asyncio.create_task(run_nft_monitor_loop(bot, storage, nft_adapter)),
+            asyncio.create_task(run_floor_sweep_watcher(bot, storage, nft_adapter)),
+        ]
+
+    health_task = asyncio.create_task(run_runtime_health_reporter(storage, health_adapters))
+
     try:
         await dp.start_polling(bot)
     finally:
         for task in price_feed_tasks:
+            task.cancel()
+        for task in nft_tasks:
             task.cancel()
         monitor_task.cancel()
         watcher_task.cancel()
